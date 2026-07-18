@@ -1662,3 +1662,244 @@ select {
     white-space: nowrap;
   }
 }
+/* ==========================================
+   MSHWARK V6 - SMOOTH MOTION
+========================================== */
+
+/* فتح التطبيق */
+body {
+  animation: appFadeIn .55s ease-out;
+}
+
+@keyframes appFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* الهيدر */
+header {
+  animation: headerDown .5s ease-out;
+}
+
+@keyframes headerDown {
+  from {
+    opacity: 0;
+    transform: translateY(-15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* البانر الرئيسي */
+.blueHero,
+.adminHero {
+  animation: heroEnter .65s cubic-bezier(.22,1,.36,1);
+}
+
+@keyframes heroEnter {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* كروت الخدمات */
+.serviceCard {
+  animation: cardEnter .55s ease-out both;
+}
+
+.serviceCard:nth-child(1) {
+  animation-delay: .08s;
+}
+
+.serviceCard:nth-child(2) {
+  animation-delay: .16s;
+}
+
+.serviceCard:nth-child(3) {
+  animation-delay: .24s;
+}
+
+@keyframes cardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* حركة الكروت والأزرار */
+.serviceCard,
+.order,
+.stats > div,
+.adminStats > div,
+button {
+  transition:
+    transform .22s ease,
+    box-shadow .22s ease,
+    background-color .22s ease,
+    border-color .22s ease;
+}
+
+.serviceCard:active,
+button:active {
+  transform: scale(.97);
+}
+
+/* فتح النوافذ */
+.overlay {
+  animation: overlayFade .22s ease-out;
+}
+
+.modal {
+  animation: modalEnter .35s cubic-bezier(.22,1,.36,1);
+}
+
+@keyframes overlayFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: translateY(25px) scale(.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ظهور الطلبات */
+.order {
+  animation: orderEnter .45s ease-out both;
+}
+
+@keyframes orderEnter {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* الإشعارات الصغيرة */
+.toast {
+  animation: toastEnter .35s cubic-bezier(.22,1,.36,1);
+}
+
+@keyframes toastEnter {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* احترام إعداد تقليل الحركة في الهاتف */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: .01ms !important;
+    animation-delay: 0s !important;
+    transition-duration: .01ms !important;
+  }
+}
+/* ===== RESET PASSWORD PAGE ===== */
+
+.resetPage {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8faff, #eef4ff);
+}
+
+.resetCard {
+  width: 100%;
+  max-width: 430px;
+  background: white;
+  padding: 35px 25px;
+  border-radius: 24px;
+  box-shadow: 0 15px 45px rgba(0, 40, 120, 0.1);
+  text-align: center;
+  animation: resetEnter .5s ease;
+}
+
+.resetCard h1 {
+  margin: 0 0 25px;
+  font-size: 32px;
+  color: #1554d1;
+}
+
+.resetCard h2 {
+  margin-bottom: 10px;
+  font-size: 22px;
+}
+
+.resetCard p {
+  color: #777;
+  margin-bottom: 25px;
+}
+
+.resetCard form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.resetCard input {
+  width: 100%;
+  padding: 15px;
+  border: 1px solid #dce3ee;
+  border-radius: 12px;
+  font-size: 16px;
+  outline: none;
+}
+
+.resetCard input:focus {
+  border-color: #2563eb;
+}
+
+.resetCard button {
+  width: 100%;
+  padding: 15px;
+  border: 0;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+@keyframes resetEnter {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

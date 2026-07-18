@@ -88,6 +88,9 @@ export default function Home() {
   const [drivers, setDrivers] = useState([]);
 
   const [notice, setNotice] = useState("");
+  const [showAccount, setShowAccount] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+const [confirmNewPassword, setConfirmNewPassword] = useState("");
 
   function flash(text) {
     setNotice(text);
@@ -297,7 +300,67 @@ export default function Home() {
         logout={() =>
           supabase.auth.signOut()
         }
-      />
+openAccount={() => setShowAccount(true)}      />
+{showAccount && (
+  <div className="overlay" onClick={() => setShowAccount(false)}>
+    <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <button
+        className="close"
+        onClick={() => setShowAccount(false)}
+      >
+        ✕
+      </button>
+
+      <h2>حسابي</h2>
+
+      <p>من هنا يمكنك إدارة حسابك وتغيير كلمة المرور.</p>
+      <input
+  type="password"
+  placeholder="كلمة المرور الجديدة"
+  value={newPassword}
+  onChange={(e) => setNewPassword(e.target.value)}
+/>
+
+<input
+  type="password"
+  placeholder="تأكيد كلمة المرور الجديدة"
+  value={confirmNewPassword}
+  onChange={(e) => setConfirmNewPassword(e.target.value)}
+/>
+
+      <button
+        className="primary"
+onClick={async () => {
+  if (newPassword.length < 6) {
+    alert("كلمة المرور لازم تكون 6 أحرف على الأقل");
+    return;
+  }
+
+  if (newPassword !== confirmNewPassword) {
+    alert("كلمتا المرور غير متطابقتين");
+    return;
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    password: newPassword,
+  });
+
+  if (error) {
+    alert("حدث خطأ: " + error.message);
+    return;
+  }
+
+  alert("تم تغيير كلمة المرور بنجاح ✅");
+
+  setNewPassword("");
+  setConfirmNewPassword("");
+  setShowAccount(false);
+}}      >
+        تغيير كلمة المرور
+      </button>
+    </div>
+  </div>
+)}
 
       {profile.role === "customer" ? (
         <Customer
@@ -741,6 +804,32 @@ function Auth({ flash }) {
             ? "تسجيل الدخول"
             : "إنشاء الحساب"}
         </button>
+        {mode === "login" && (
+  <button
+    type="button"
+    className="forgotPassword"
+onClick={async () => {
+  const email = prompt("اكتب البريد الإلكتروني المسجل به حسابك:");
+
+  if (!email) return;
+
+  const { error } = await supabase.auth.resetPasswordForEmail(
+    email.trim(),
+    {
+      redirectTo: `${window.location.origin}/reset-password`,
+    }
+  );
+
+  if (error) {
+    alert("حصل خطأ: " + error.message);
+    return;
+  }
+
+  alert("تم إرسال رابط استعادة كلمة المرور إلى بريدك الإلكتروني ✅");
+}}  >
+    نسيت كلمة المرور؟
+  </button>
+)}
       </form>
     </main>
   );
@@ -753,6 +842,7 @@ function Auth({ flash }) {
 function Header({
   profile,
   logout,
+  openAccount,
 }) {
   return (
     <header>
@@ -793,11 +883,20 @@ function Header({
         </div>
 
         <button
-          className="icon"
-          onClick={logout}
-        >
-          <LogOut size={19} />
-        </button>
+  className="icon"
+  onClick={openAccount}
+  title="حسابي"
+>
+  ⚙️
+</button>
+
+<button
+  className="icon"
+  onClick={logout}
+  title="تسجيل الخروج"
+>
+  <LogOut size={19} />
+</button>
       </div>
     </header>
   );
