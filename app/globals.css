@@ -1400,3 +1400,265 @@ header {
     height: 300px !important;
   }
 }
+/* ==========================================
+   MSHWARK V5 - PREMIUM MOBILE UI
+========================================== */
+
+:root {
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --primary-soft: #eff6ff;
+  --background: #f6f8fc;
+  --dark: #0f172a;
+  --text: #334155;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --success: #16a34a;
+  --shadow: 0 12px 35px rgba(15, 23, 42, 0.08);
+}
+
+body {
+  background:
+    radial-gradient(circle at top right, rgba(37,99,235,.06), transparent 30%),
+    var(--background);
+  -webkit-font-smoothing: antialiased;
+}
+
+header {
+  height: 68px;
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 1px 12px rgba(15,23,42,.04);
+}
+
+.logo {
+  font-size: 25px;
+  letter-spacing: -.5px;
+}
+
+.blueHero,
+.adminHero {
+  background:
+    radial-gradient(circle at 10% 10%, rgba(255,255,255,.18), transparent 28%),
+    linear-gradient(135deg, #1d4ed8, #2563eb 55%, #3b82f6);
+  border-radius: 28px;
+  box-shadow: 0 18px 45px rgba(37,99,235,.20);
+}
+
+.serviceCard {
+  border: 1px solid rgba(226,232,240,.9);
+  border-radius: 24px;
+  padding: 26px;
+  box-shadow: 0 8px 25px rgba(15,23,42,.05);
+}
+
+.serviceCard svg {
+  padding: 10px;
+  width: 58px;
+  height: 58px;
+  border-radius: 17px;
+  background: var(--primary-soft);
+}
+
+.serviceCard b {
+  font-size: 21px;
+}
+
+.stats > div,
+.adminStats > div {
+  border-radius: 20px;
+  box-shadow: 0 6px 22px rgba(15,23,42,.04);
+}
+
+.order {
+  border-radius: 22px;
+  box-shadow: 0 8px 28px rgba(15,23,42,.05);
+}
+
+.primary {
+  min-height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  box-shadow: 0 7px 18px rgba(37,99,235,.18);
+  transition: transform .2s, box-shadow .2s;
+}
+
+.primary:active {
+  transform: scale(.98);
+}
+
+input,
+textarea,
+select {
+  border-radius: 14px;
+  min-height: 48px;
+  background: #fff;
+}
+
+.modal {
+  border-radius: 26px;
+}
+
+.toast {
+  border-radius: 15px;
+  box-shadow: 0 15px 40px rgba(15,23,42,.20);
+}
+
+/* شكل التطبيق على الموبايل */
+
+@media (max-width: 600px) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  header {
+    height: 62px;
+    padding: 0 18px;
+  }
+
+  .logo {
+    font-size: 23px;
+  }
+
+  .blueHero,
+  .adminHero {
+    width: calc(100% - 24px);
+    margin: 14px auto 20px;
+    padding: 26px 22px;
+    border-radius: 24px;
+  }
+
+  .blueHero h1,
+  .adminHero h1 {
+    font-size: 27px;
+    line-height: 1.35;
+  }
+
+  .blueHero p,
+  .adminHero p {
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  .serviceGrid {
+    width: calc(100% - 24px);
+    gap: 12px;
+  }
+
+  .threeServices {
+    grid-template-columns: 1fr;
+  }
+
+  .serviceCard {
+    min-height: 130px;
+    padding: 20px;
+    border-radius: 20px;
+  }
+
+  .serviceCard b {
+    font-size: 20px;
+  }
+
+  .serviceCard span {
+    font-size: 14px;
+  }
+
+  .stats {
+    width: calc(100% - 24px);
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .stats > div {
+    padding: 14px 10px;
+    border-radius: 16px;
+    text-align: center;
+    align-items: center;
+  }
+
+  .stats svg {
+    width: 20px;
+  }
+
+  .stats b {
+    font-size: 17px;
+  }
+
+  .stats span {
+    font-size: 11px;
+  }
+
+  .section {
+    width: calc(100% - 24px);
+    margin-top: 22px;
+  }
+
+  .title h2 {
+    font-size: 20px;
+  }
+
+  .order {
+    padding: 17px;
+    border-radius: 19px;
+  }
+
+  .orderTop {
+    gap: 10px;
+  }
+
+  .modal {
+    width: 100%;
+    margin: 10px auto;
+    padding: 20px 17px;
+    border-radius: 24px;
+  }
+
+  .overlay {
+    padding: 10px;
+  }
+
+  .toast {
+    left: 12px;
+    right: 12px;
+    bottom: 15px;
+    max-width: none;
+    text-align: center;
+  }
+}
+/* FIX MOBILE HEADER */
+
+@media (max-width: 600px) {
+  header {
+    width: 100%;
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .headActions {
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .hello {
+    display: none;
+  }
+
+  .icon {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    padding: 0;
+    border-radius: 11px;
+  }
+
+  header .logo {
+    font-size: 21px;
+    white-space: nowrap;
+  }
+
+  .headActions .ghost {
+    padding: 9px 10px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+}

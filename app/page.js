@@ -762,6 +762,29 @@ function Header({
       </div>
 
       <div className="headActions">
+        <button
+  className="icon"
+  title="تفعيل الإشعارات"
+  onClick={async () => {
+    if (!("Notification" in window)) {
+      alert("جهازك لا يدعم الإشعارات");
+      return;
+    }
+
+    const permission = await Notification.requestPermission();
+
+    if (permission === "granted") {
+      new Notification("مشوارك 🔔", {
+        body: "تم تفعيل الإشعارات بنجاح",
+        icon: "/icon-192.png",
+      });
+    } else {
+      alert("لازم تسمح بالإشعارات علشان توصلك تحديثات المشاوير");
+    }
+  }}
+>
+  🔔
+</button>
         <div className="hello">
           أهلاً،{" "}
           {profile.full_name?.split(
