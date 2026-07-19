@@ -840,25 +840,30 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
             "Notification" in window ? Notification.permission : "unsupported",
           );
           if (
-            (payload.eventType === "INSERT" ||
-              (payload.eventType === "UPDATE" &&
-                Number(payload.old?.price) !== Number(payload.new?.price))) &&
-            profile?.role === "customer" &&
-            "Notification" in window &&
-            Notification.permission === "granted"
-          ) {
-            const isNewOffer = payload.eventType === "INSERT";
+  (
+    payload.eventType === "INSERT" ||
+    (
+      payload.eventType === "UPDATE" &&
+      payload.new?.status !== "accepted" &&
+      Number(payload.old?.price) !== Number(payload.new?.price)
+    )
+  ) &&
+  profile?.role === "customer" &&
+  "Notification" in window &&
+  Notification.permission === "granted"
+) {
+  const isNewOffer = payload.eventType === "INSERT";
 
-            new Notification(
-              isNewOffer ? "عرض جديد على مشوارك 🔔" : "تم تحديث عرض السعر 🔔",
-              {
-                body: isNewOffer
-                  ? `وصلك عرض جديد بقيمة ${payload.new?.price ?? ""} جنيه`
-                  : `تم تحديث العرض إلى ${payload.new?.price ?? ""} جنيه`,
-                icon: "/icon-192.png",
-              },
-            );
-          }
+  new Notification(
+    isNewOffer ? "🔔 عرض جديد على مشوارك" : "🔔 تم تحديث عرض السعر",
+    {
+      body: isNewOffer
+        ? `وصلك عرض جديد بقيمة ${payload.new?.price ?? ""} جنيه`
+        : `تم تحديث العرض إلى ${payload.new?.price ?? ""} جنيه`,
+      icon: "/icon-192.png",
+    },
+  );
+}
           // إشعار المندوب عند قبول عرضه
 if (
   payload.eventType === "UPDATE" &&
