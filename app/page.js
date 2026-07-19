@@ -1048,8 +1048,9 @@ if (belongsToMyOrders) {
 }
         },
       )
-      .subscribe();
-
+.subscribe((status) => {
+  console.log("📡 REALTIME STATUS:", status);
+});
     return () => {
       supabase.removeChannel(channel);
     };
