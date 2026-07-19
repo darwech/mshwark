@@ -157,11 +157,10 @@ const [confirmNewPassword, setConfirmNewPassword] = useState("");
     }
 
     if (currentProfile?.role === "driver") {
-      query = query.eq(
-        "driver_id",
-        session.user.id
-      );
-    }
+  query = query.or(
+    `and(status.eq.requested,driver_id.is.null),driver_id.eq.${session.user.id}`
+  );
+}
 
     const { data: orderData, error: orderError } =
       await query.order("created_at", {
@@ -175,19 +174,20 @@ const [confirmNewPassword, setConfirmNewPassword] = useState("");
     const { data: driverData } = await supabase
       .from("profiles")
       .select(`
-        id,
-        full_name,
-        phone,
-        vehicle_type,
-        vehicle_plate,
-        rating,
-        rating_count,
-        is_available,
-        driver_status,
-        can_purchase,
-        can_delivery,
-        can_ride
-      `)
+  id,
+  full_name,
+  phone,
+  vehicle_type,
+  vehicle_plate,
+  avatar_url,
+  rating,
+  rating_count,
+  is_available,
+  driver_status,
+  can_purchase,
+  can_delivery,
+  can_ride
+`)
       .eq("role", "driver")
       .eq("driver_status", "approved")
       .eq("is_available", true);
@@ -407,6 +407,8 @@ function Auth({ flash }) {
 
   const [cardBack, setCardBack] =
     useState(null);
+    const [driverAvatar, setDriverAvatar] =
+  useState(null);
 
   async function uploadDriverDocument(
     userId,
@@ -440,8 +442,41 @@ function Auth({ flash }) {
 
     return filePath;
   }
+  async function uploadDriverAvatar(userId, file) {
+  if (!file) {
+    throw new Error("الصورة الشخصية غير موجودة");
+  }
 
-  async function submit(e) {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("لازم تختار صورة صحيحة");
+  }
+
+  const extension =
+    file.name.split(".").pop().toLowerCase() || "jpg";
+
+  const filePath =
+    `${userId}/avatar-${Date.now()}.${extension}`;
+
+  const { error: uploadError } =
+    await supabase.storage
+      .from("driver-avatars")
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+
+  if (uploadError) {
+    throw uploadError;
+  }
+
+  const { data } = supabase.storage
+    .from("driver-avatars")
+    .getPublicUrl(filePath);
+
+  return data.publicUrl;
+}
+
+  async function submit(e) { 
     e.preventDefault();
 
     setBusy(true);
@@ -470,13 +505,13 @@ function Auth({ flash }) {
       }
 
       if (
-        role === "driver" &&
-        (!cardFront || !cardBack)
-      ) {
-        throw new Error(
-          "لازم ترفع صورة البطاقة من الأمام والخلف"
-        );
-      }
+  role === "driver" &&
+  (!driverAvatar || !cardFront || !cardBack)
+) {
+  throw new Error(
+    "لازم ترفع صورتك الشخصية وصورة البطاقة من الأمام والخلف"
+  );
+}
 
       const metadata = {
         full_name:
@@ -522,6 +557,11 @@ function Auth({ flash }) {
         flash(
           "جاري رفع مستندات التحقق..."
         );
+        const avatarUrl =
+  await uploadDriverAvatar(
+    data.user.id,
+    driverAvatar
+  );
 
         const frontPath =
           await uploadDriverDocument(
@@ -541,6 +581,7 @@ function Auth({ flash }) {
           await supabase
             .from("profiles")
             .update({
+              avatar_url: avatarUrl,
               id_card_front:
                 frontPath,
 
@@ -734,6 +775,24 @@ function Auth({ flash }) {
                     </p>
                   </div>
                 </div>
+                <label>
+  الصورة الشخصية
+</label>
+
+<input
+  type="file"
+  accept="image/jpeg,image/png,image/webp"
+  required
+  onChange={(e) =>
+    setDriverAvatar(
+      e.target.files?.[0] || null
+    )
+  }
+/>
+
+<small className="privacyNote">
+  ارفع صورة شخصية واضحة لك، ستظهر للعميل للتعرف عليك.
+</small>
 
                 <label>
                   البطاقة — الوجه الأمامي
@@ -922,6 +981,36 @@ const [
   serviceType,
   setServiceType,
 ] = useState(null);
+const [selectedDriverId, setSelectedDriverId] =
+  useState("");
+  const [orderOffers, setOrderOffers] = useState([]);
+  useEffect(() => {
+  async function loadOffers() {
+    if (!profile?.id) return;
+
+    const orderIds = orders.map((order) => order.id);
+
+    if (orderIds.length === 0) {
+      setOrderOffers([]);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("order_offers")
+      .select("*")
+      .in("order_id", orderIds)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("LOAD OFFERS ERROR:", error);
+      return;
+    }
+
+    setOrderOffers(data || []);
+  }
+
+  loadOffers();
+}, [orders, profile?.id]);
   const [
     showAllOrders,
     setShowAllOrders,
@@ -983,9 +1072,7 @@ async function createOrder(e) {
     customer_id:
       profile.id,
 
-    driver_id:
-      form.get("driver"),
-
+    driver_id: null,
     customer_phone:
       form.get("phone"),
 
@@ -1230,7 +1317,28 @@ async function createOrder(e) {
 
     refresh();
   }
+  async function acceptDriverOffer(item) {
+  if (!item?.id) {
+    flash("بيانات العرض غير مكتملة");
+    return;
+  }
 
+  const { error } = await supabase.rpc(
+    "customer_accept_driver_offer",
+    {
+      p_offer_id: item.id,
+    }
+  );
+
+  if (error) {
+    console.error("ACCEPT OFFER ERROR:", error);
+    flash(error.message);
+    return;
+  }
+
+  flash("تم قبول عرض المندوب بنجاح");
+  refresh();
+}
   return (
     <>
       <section className="blueHero">
@@ -1381,6 +1489,11 @@ async function createOrder(e) {
                   profile
                 }
                 decide={decide}
+                offers={orderOffers.filter(
+  (offer) => offer.order_id === order.id
+)}
+drivers={drivers}
+acceptDriverOffer={acceptDriverOffer}
                 refresh={
                   refresh
                 }
@@ -1642,9 +1755,10 @@ async function createOrder(e) {
             </label>
 
             <select
-              name="driver"
-              required
-            >
+  name="driver"
+  value={selectedDriverId}
+  onChange={(e) => setSelectedDriverId(e.target.value)}
+>
               <option value="">
                 اختر مندوبًا متاحًا
               </option>
@@ -1672,6 +1786,41 @@ async function createOrder(e) {
                 )
               )}
             </select>
+            {selectedDriverId && (() => {
+  const selectedDriver = availableDrivers.find(
+    (driver) => driver.id === selectedDriverId
+  );
+
+  if (!selectedDriver) return null;
+
+  return (
+    <div className="selectedDriverCard">
+      <div className="selectedDriverAvatar">
+  {selectedDriver.avatar_url ? (
+    <img
+      src={selectedDriver.avatar_url}
+      alt={selectedDriver.full_name}
+      className="driverAvatar"
+    />
+  ) : (
+    <User size={32} />
+  )}
+</div>
+
+      <div className="selectedDriverInfo">
+        <strong>{selectedDriver.full_name}</strong>
+
+        <span>
+          {selectedDriver.vehicle_type || "مركبة غير محددة"}
+        </span>
+
+        <span>
+          ⭐ {selectedDriver.rating || 5}
+        </span>
+      </div>
+    </div>
+  );
+})()}
 
             {availableDrivers.length ===
               0 && (
@@ -1776,14 +1925,45 @@ function Driver({
       flash("اكتب سعر صحيح");
       return;
     }
+const { data: existingOffer, error: checkError } = await supabase
+  .from("order_offers")
+  .select("id")
+  .eq("order_id", orderId)
+  .eq("driver_id", profile.id)
+  .maybeSingle();
 
-    const { error } = await supabase.rpc(
-      "driver_send_offer",
-      {
-        p_order_id: orderId,
-        p_fee: Number(fee),
-      }
-    );
+if (checkError) {
+  flash(checkError.message);
+  return;
+}
+
+let error;
+
+if (existingOffer) {
+  // تعديل العرض الموجود
+  const result = await supabase
+    .from("order_offers")
+    .update({
+      price: Number(fee),
+      status: "pending",
+    })
+    .eq("id", existingOffer.id)
+    .eq("driver_id", profile.id);
+
+  error = result.error;
+} else {
+  // إنشاء عرض لأول مرة
+  const result = await supabase
+    .from("order_offers")
+    .insert({
+      order_id: orderId,
+      driver_id: profile.id,
+      price: Number(fee),
+      status: "pending",
+    });
+
+  error = result.error;
+}
 
     if (error) {
       flash(error.message);
@@ -2140,6 +2320,9 @@ function OrderCard({
   currentUser,
   decide,
   offer,
+  offers,
+  drivers,
+  acceptDriverOffer,
   next,
   refresh,
   flash,
@@ -2761,12 +2944,60 @@ function OrderCard({
             </button>
           </div>
         )}
+{/* عروض أسعار المندوبين */}
+{customer &&
+  o.status === "requested" &&
+  offers?.length > 0 && (
+    <div className="orderOffers">
+      <h4>عروض المندوبين</h4>
 
+      {offers.map((item) => {
+  const offerDriver = drivers?.find(
+    (d) => d.id === item.driver_id
+  );
+
+  return (
+    <div
+      key={item.id}
+      className="offerCard"
+    >
+      <div>
+        <strong>
+          {offerDriver?.full_name || "مندوب"}
+        </strong>
+
+        <div>
+          {offerDriver?.vehicle_type || "وسيلة التوصيل غير محددة"}
+        </div>
+
+        <div>
+          ⭐ {Number(offerDriver?.rating || 5).toFixed(1)}
+        </div>
+      </div>
+
+      <div>
+        <strong>
+          {Number(item.price)} جنيه
+        </strong>
+      </div>
+      {customer && o.status === "requested" && (
+  <button
+    type="button"
+    className="primary"
+onClick={() => acceptDriverOffer(item)}  >
+    قبول العرض
+  </button>
+)}
+    </div>
+  );
+})}
+    </div>
+)}
       {/* إرسال عرض */}
 
       {driver &&
-        o.status ===
-          "requested" && (
+  o.status === "requested" &&
+  !o.driver_id && (
           <button
             className="primary"
             onClick={() =>

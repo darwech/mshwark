@@ -2579,3 +2579,97 @@ header {
     box-shadow: 0 15px 40px rgba(15,23,42,.12);
   }
 }
+.selectedDriverCard{
+    display:flex;
+    align-items:center;
+    gap:15px;
+    padding:15px;
+    margin-top:15px;
+    border:1px solid #ddd;
+    border-radius:16px;
+    background:#fff;
+}
+
+.selectedDriverAvatar{
+    width:70px;
+    height:70px;
+    flex-shrink:0;
+}
+
+.driverAvatar{
+    width:70px;
+    height:70px;
+    border-radius:50%;
+    object-fit:cover;
+    border:3px solid #2563eb;
+}
+
+.selectedDriverInfo{
+    display:flex;
+    flex-direction:column;
+    gap:5px;
+}
+
+.selectedDriverInfo strong{
+    font-size:18px;
+}
+
+.selectedDriverInfo span{
+    color:#666;
+}
+.selectedDriverCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  margin-top: 14px;
+  padding: 16px 18px;
+  background: #fff;
+  border: 1px solid #dbe3ef;
+  border-radius: 18px;
+  direction: rtl;
+}
+
+.selectedDriverAvatar {
+  width: 72px;
+  height: 72px;
+  min-width: 72px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5f9;
+}
+
+.driverAvatar {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 3px solid #2563eb;
+}
+
+.selectedDriverInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  text-align: right;
+}
+
+.selectedDriverInfo strong {
+  width: 100%;
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.selectedDriverInfo span {
+  width: 100%;
+  font-size: 14px;
+  color: #64748b;
+}
