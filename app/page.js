@@ -840,44 +840,40 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
             "Notification" in window ? Notification.permission : "unsupported",
           );
           if (
-  (
-    payload.eventType === "INSERT" ||
-    (
-      payload.eventType === "UPDATE" &&
-      payload.new?.status !== "accepted" &&
-      Number(payload.old?.price) !== Number(payload.new?.price)
-    )
-  ) &&
-  profile?.role === "customer" &&
-  "Notification" in window &&
-  Notification.permission === "granted"
-) {
-  const isNewOffer = payload.eventType === "INSERT";
+            (payload.eventType === "INSERT" ||
+              (payload.eventType === "UPDATE" &&
+                payload.new?.status !== "accepted" &&
+                Number(payload.old?.price) !== Number(payload.new?.price))) &&
+            profile?.role === "customer" &&
+            "Notification" in window &&
+            Notification.permission === "granted"
+          ) {
+            const isNewOffer = payload.eventType === "INSERT";
 
-  new Notification(
-    isNewOffer ? "🔔 عرض جديد على مشوارك" : "🔔 تم تحديث عرض السعر",
-    {
-      body: isNewOffer
-        ? `وصلك عرض جديد بقيمة ${payload.new?.price ?? ""} جنيه`
-        : `تم تحديث العرض إلى ${payload.new?.price ?? ""} جنيه`,
-      icon: "/icon-192.png",
-    },
-  );
-}
+            new Notification(
+              isNewOffer ? "🔔 عرض جديد على مشوارك" : "🔔 تم تحديث عرض السعر",
+              {
+                body: isNewOffer
+                  ? `وصلك عرض جديد بقيمة ${payload.new?.price ?? ""} جنيه`
+                  : `تم تحديث العرض إلى ${payload.new?.price ?? ""} جنيه`,
+                icon: "/icon-192.png",
+              },
+            );
+          }
           // إشعار المندوب عند قبول عرضه
-if (
-  payload.eventType === "UPDATE" &&
-  payload.new?.status === "accepted" &&
-  payload.new?.driver_id === profile?.id &&
-  profile?.role === "driver" &&
-  "Notification" in window &&
-  Notification.permission === "granted"
-) {
-  new Notification("تم قبول عرضك 🎉", {
-    body: "وافق العميل على عرضك، افتح مشوارك لمشاهدة تفاصيل الطلب.",
-    icon: "/icon-192.png",
-  });
-}
+          if (
+            payload.eventType === "UPDATE" &&
+            payload.new?.status === "accepted" &&
+            payload.new?.driver_id === profile?.id &&
+            profile?.role === "driver" &&
+            "Notification" in window &&
+            Notification.permission === "granted"
+          ) {
+            new Notification("تم قبول عرضك 🎉", {
+              body: "وافق العميل على عرضك، افتح مشوارك لمشاهدة تفاصيل الطلب.",
+              icon: "/icon-192.png",
+            });
+          }
 
           const loadRealtimeOffers = async () => {
             const orderIds = orders.map((order) => order.id);
@@ -909,6 +905,46 @@ if (
       supabase.removeChannel(channel);
     };
   }, [profile?.id, orders]);
+  useEffect(() => {
+    if (!profile?.id || profile?.role !== "driver") return;
+
+    const driverChannel = supabase
+      .channel(`driver-accepted-offers-${profile.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "order_offers",
+        },
+        (payload) => {
+          console.log("DRIVER OFFER UPDATE:", payload);
+
+          if (
+            payload.new?.driver_id === profile.id &&
+            payload.new?.status === "accepted"
+          ) {
+            if (
+              "Notification" in window &&
+              Notification.permission === "granted"
+            ) {
+              new Notification("تم قبول عرضك 🎉", {
+                body: "وافق العميل على عرضك، افتح مشوارك لمشاهدة تفاصيل الطلب.",
+                icon: "/icon-192.png",
+              });
+            }
+
+            flash("🎉 تم قبول عرضك من العميل");
+            refresh();
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(driverChannel);
+    };
+  }, [profile?.id, profile?.role]);
   const [showAllOrders, setShowAllOrders] = useState(false);
 
   const visibleOrders = showAllOrders ? orders : orders.slice(0, 3);
@@ -1472,6 +1508,47 @@ function Driver({ profile, orders, refresh, flash }) {
   const [showAllOrders, setShowAllOrders] = useState(false);
 
   const visibleOrders = showAllOrders ? orders : orders.slice(0, 3);
+  // إشعار المندوب عند قبول العميل لعرضه
+useEffect(() => {
+  if (!profile?.id) return;
+
+  const driverChannel = supabase
+    .channel(`driver-accepted-offers-${profile.id}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "order_offers",
+      },
+      (payload) => {
+        console.log("DRIVER OFFER UPDATE:", payload);
+
+        if (
+          payload.new?.driver_id === profile.id &&
+          payload.new?.status === "accepted"
+        ) {
+          if (
+            "Notification" in window &&
+            Notification.permission === "granted"
+          ) {
+            new Notification("تم قبول عرضك 🎉", {
+              body: "وافق العميل على عرضك، افتح مشوارك لمشاهدة تفاصيل الطلب.",
+              icon: "/icon-192.png",
+            });
+          }
+
+          flash("🎉 تم قبول عرضك من العميل");
+          refresh();
+        }
+      },
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(driverChannel);
+  };
+}, [profile?.id]);
 
   async function changeAvailability() {
     const { error } = await supabase
