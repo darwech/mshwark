@@ -85,6 +85,24 @@ export default function Home() {
   const [showAccount, setShowAccount] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) {
+      console.log("SERVICE WORKER NOT SUPPORTED");
+      return;
+    }
+
+    async function registerServiceWorker() {
+      try {
+        const registration = await navigator.serviceWorker.register("/sw.js");
+
+        console.log("SERVICE WORKER REGISTERED:", registration.scope);
+      } catch (error) {
+        console.error("SERVICE WORKER ERROR:", error);
+      }
+    }
+
+    registerServiceWorker();
+  }, []);
 
   function flash(text) {
     setNotice(text);
@@ -734,6 +752,15 @@ function Auth({ flash }) {
 /* =========================================
    HEADER
 ========================================= */
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+
+  const rawData = window.atob(base64);
+
+  return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
+}
 
 function Header({ profile, logout, openAccount }) {
   return (
@@ -748,20 +775,64 @@ function Header({ profile, logout, openAccount }) {
           className="icon"
           title="تفعيل الإشعارات"
           onClick={async () => {
-            if (!("Notification" in window)) {
-              alert("جهازك لا يدعم الإشعارات");
-              return;
-            }
+            try {
+              if (
+                !("Notification" in window) ||
+                !("serviceWorker" in navigator) ||
+                !("PushManager" in window)
+              ) {
+                alert("جهازك أو المتصفح لا يدعم إشعارات Push");
+                return;
+              }
 
-            const permission = await Notification.requestPermission();
+              const permission = await Notification.requestPermission();
 
-            if (permission === "granted") {
-              new Notification("مشوارك 🔔", {
-                body: "تم تفعيل الإشعارات بنجاح",
-                icon: "/icon-192.png",
-              });
-            } else {
-              alert("لازم تسمح بالإشعارات علشان توصلك تحديثات المشاوير");
+              if (permission !== "granted") {
+                alert("لازم تسمح بالإشعارات علشان توصلك تحديثات مشوارك");
+                return;
+              }
+
+              const registration = await navigator.serviceWorker.ready;
+
+              let subscription =
+                await registration.pushManager.getSubscription();
+
+              if (!subscription) {
+                subscription = await registration.pushManager.subscribe({
+                  userVisibleOnly: true,
+                  applicationServerKey: urlBase64ToUint8Array(
+                    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+                  ),
+                });
+              }
+
+              const json = subscription.toJSON();
+
+              const { error } = await supabase
+                .from("push_subscriptions")
+                .upsert(
+                  {
+                    user_id: profile.id,
+                    endpoint: subscription.endpoint,
+                    p256dh: json.keys.p256dh,
+                    auth: json.keys.auth,
+                  },
+                  {
+                    onConflict: "endpoint",
+                  },
+                );
+
+              if (error) {
+                console.error("PUSH SAVE ERROR:", error);
+                alert("حدث خطأ أثناء تفعيل الإشعارات");
+                return;
+              }
+
+              console.log("PUSH SUBSCRIPTION SAVED:", subscription);
+              alert("تم تفعيل إشعارات مشوارك بنجاح 🔔");
+            } catch (error) {
+              console.error("PUSH SUBSCRIPTION ERROR:", error);
+              alert("تعذر تفعيل الإشعارات: " + error.message);
             }
           }}
         >
@@ -789,7 +860,6 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
   const [show, setShow] = useState(false);
 
   const [serviceType, setServiceType] = useState(null);
-  const [selectedDriverId, setSelectedDriverId] = useState("");
   const [orderOffers, setOrderOffers] = useState([]);
   useEffect(() => {
     async function loadOffers() {
@@ -860,20 +930,6 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
               },
             );
           }
-          // إشعار المندوب عند قبول عرضه
-          if (
-            payload.eventType === "UPDATE" &&
-            payload.new?.status === "accepted" &&
-            payload.new?.driver_id === profile?.id &&
-            profile?.role === "driver" &&
-            "Notification" in window &&
-            Notification.permission === "granted"
-          ) {
-            new Notification("تم قبول عرضك 🎉", {
-              body: "وافق العميل على عرضك، افتح مشوارك لمشاهدة تفاصيل الطلب.",
-              icon: "/icon-192.png",
-            });
-          }
 
           const loadRealtimeOffers = async () => {
             const orderIds = orders.map((order) => order.id);
@@ -905,46 +961,7 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
       supabase.removeChannel(channel);
     };
   }, [profile?.id, orders]);
-  useEffect(() => {
-    if (!profile?.id || profile?.role !== "driver") return;
 
-    const driverChannel = supabase
-      .channel(`driver-accepted-offers-${profile.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "order_offers",
-        },
-        (payload) => {
-          console.log("DRIVER OFFER UPDATE:", payload);
-
-          if (
-            payload.new?.driver_id === profile.id &&
-            payload.new?.status === "accepted"
-          ) {
-            if (
-              "Notification" in window &&
-              Notification.permission === "granted"
-            ) {
-              new Notification("تم قبول عرضك 🎉", {
-                body: "وافق العميل على عرضك، افتح مشوارك لمشاهدة تفاصيل الطلب.",
-                icon: "/icon-192.png",
-              });
-            }
-
-            flash("🎉 تم قبول عرضك من العميل");
-            refresh();
-          }
-        },
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(driverChannel);
-    };
-  }, [profile?.id, profile?.role]);
   const [showAllOrders, setShowAllOrders] = useState(false);
 
   const visibleOrders = showAllOrders ? orders : orders.slice(0, 3);
@@ -1095,6 +1112,42 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
       flash(error.message || "تعذر إرسال الطلب");
 
       return;
+    }
+    // إرسال Push للمندوبين عند إنشاء طلب جديد
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session?.access_token) {
+        const serviceNames = {
+          purchase: "شراء",
+          delivery: "توصيل",
+          ride: "مشوار",
+        };
+
+        const serviceName = serviceNames[serviceType] || "طلب";
+
+        const response = await fetch("/api/push", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            title: `🔔 طلب ${serviceName} جديد`,
+            message:
+              "يوجد طلب جديد متاح، افتح مشوارك لمشاهدة التفاصيل وتقديم عرضك.",
+            url: "/",
+          }),
+        });
+
+        const result = await response.json();
+
+        console.log("PUSH RESULT:", result);
+      }
+    } catch (pushError) {
+      console.error("PUSH REQUEST ERROR:", pushError);
     }
 
     /* =========================================
@@ -1410,60 +1463,6 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
 
             <input name="phone" required defaultValue={profile.phone || ""} />
 
-            <label>اختار المندوب</label>
-
-            <select
-              name="driver"
-              value={selectedDriverId}
-              onChange={(e) => setSelectedDriverId(e.target.value)}
-            >
-              <option value="">اختر مندوبًا متاحًا</option>
-
-              {availableDrivers.map((driver) => (
-                <option key={driver.id} value={driver.id}>
-                  {driver.full_name}
-                  {" — "}
-                  {driver.vehicle_type || "مندوب"}
-                  {" — ⭐ "}
-                  {driver.rating || 5}
-                </option>
-              ))}
-            </select>
-            {selectedDriverId &&
-              (() => {
-                const selectedDriver = availableDrivers.find(
-                  (driver) => driver.id === selectedDriverId,
-                );
-
-                if (!selectedDriver) return null;
-
-                return (
-                  <div className="selectedDriverCard">
-                    <div className="selectedDriverAvatar">
-                      {selectedDriver.avatar_url ? (
-                        <img
-                          src={selectedDriver.avatar_url}
-                          alt={selectedDriver.full_name}
-                          className="driverAvatar"
-                        />
-                      ) : (
-                        <User size={32} />
-                      )}
-                    </div>
-
-                    <div className="selectedDriverInfo">
-                      <strong>{selectedDriver.full_name}</strong>
-
-                      <span>
-                        {selectedDriver.vehicle_type || "مركبة غير محددة"}
-                      </span>
-
-                      <span>⭐ {selectedDriver.rating || 5}</span>
-                    </div>
-                  </div>
-                );
-              })()}
-
             {availableDrivers.length === 0 && (
               <div className="riskWarning">
                 <AlertTriangle />
@@ -1509,46 +1508,110 @@ function Driver({ profile, orders, refresh, flash }) {
 
   const visibleOrders = showAllOrders ? orders : orders.slice(0, 3);
   // إشعار المندوب عند قبول العميل لعرضه
-useEffect(() => {
-  if (!profile?.id) return;
+  useEffect(() => {
+    if (!profile?.id) return;
 
-  const driverChannel = supabase
-    .channel(`driver-accepted-offers-${profile.id}`)
-    .on(
-      "postgres_changes",
-      {
-        event: "UPDATE",
-        schema: "public",
-        table: "order_offers",
-      },
-      (payload) => {
-        console.log("DRIVER OFFER UPDATE:", payload);
+    const driverChannel = supabase
+      .channel(`driver-accepted-offers-${profile.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "order_offers",
+        },
+        (payload) => {
+          console.log("DRIVER OFFER UPDATE:", payload);
 
-        if (
-          payload.new?.driver_id === profile.id &&
-          payload.new?.status === "accepted"
-        ) {
+          if (
+            payload.new?.driver_id === profile.id &&
+            payload.new?.status === "accepted"
+          ) {
+            if (
+              "Notification" in window &&
+              Notification.permission === "granted"
+            ) {
+              new Notification("تم قبول عرضك 🎉", {
+                body: "وافق العميل على عرضك، افتح مشوارك لمشاهدة تفاصيل الطلب.",
+                icon: "/icon-192.png",
+              });
+            }
+
+            flash("🎉 تم قبول عرضك من العميل");
+            refresh();
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(driverChannel);
+    };
+  }, [profile?.id]);
+  // إشعار المندوب عند وصول طلب جديد
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    const newOrdersChannel = supabase
+      .channel(`new-orders-driver-${profile.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "orders",
+        },
+        (payload) => {
+          console.log("NEW ORDER RECEIVED:", payload);
+
+          const newOrder = payload.new;
+
+          // المندوب غير متاح = لا نرسل إشعار
+          if (profile?.is_available === false) return;
+
+          // نتأكد أن نوع الخدمة مناسب للمندوب
+          if (
+            newOrder?.service_type === "purchase" &&
+            profile?.can_purchase === false
+          )
+            return;
+
+          if (
+            newOrder?.service_type === "delivery" &&
+            profile?.can_delivery === false
+          )
+            return;
+
+          if (newOrder?.service_type === "ride" && profile?.can_ride === false)
+            return;
+
           if (
             "Notification" in window &&
             Notification.permission === "granted"
           ) {
-            new Notification("تم قبول عرضك 🎉", {
-              body: "وافق العميل على عرضك، افتح مشوارك لمشاهدة تفاصيل الطلب.",
+            const serviceNames = {
+              purchase: "شراء",
+              delivery: "توصيل",
+              ride: "مشوار",
+            };
+
+            const serviceName = serviceNames[newOrder?.service_type] || "خدمة";
+
+            new Notification(`🔔 طلب ${serviceName} جديد`, {
+              body: "يوجد طلب جديد متاح، افتح مشوارك لمشاهدة التفاصيل وتقديم عرضك.",
               icon: "/icon-192.png",
             });
           }
 
-          flash("🎉 تم قبول عرضك من العميل");
           refresh();
-        }
-      },
-    )
-    .subscribe();
+        },
+      )
+      .subscribe();
 
-  return () => {
-    supabase.removeChannel(driverChannel);
-  };
-}, [profile?.id]);
+    return () => {
+      supabase.removeChannel(newOrdersChannel);
+    };
+  }, [profile?.id]);
 
   async function changeAvailability() {
     const { error } = await supabase
