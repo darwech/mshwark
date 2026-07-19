@@ -1010,28 +1010,42 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
             );
           }
 
-          const loadRealtimeOffers = async () => {
-            const orderIds = orders.map((order) => order.id);
+          const affectedOrderId =
+  payload.new?.order_id || payload.old?.order_id;
 
-            if (orderIds.length === 0) {
-              setOrderOffers([]);
-              return;
-            }
+const belongsToMyOrders = orders.some(
+  (order) => order.id === affectedOrderId
+);
 
-            const { data, error } = await supabase
-              .from("order_offers")
-              .select("*")
-              .in("order_id", orderIds)
-              .order("created_at", {
-                ascending: false,
-              });
+if (belongsToMyOrders) {
+  setOrderOffers((currentOffers) => {
+    if (payload.eventType === "INSERT") {
+      const alreadyExists = currentOffers.some(
+        (offer) => offer.id === payload.new.id
+      );
 
-            if (!error) {
-              setOrderOffers(data || []);
-            }
-          };
+      if (alreadyExists) return currentOffers;
 
-          loadRealtimeOffers();
+      return [payload.new, ...currentOffers];
+    }
+
+    if (payload.eventType === "UPDATE") {
+      return currentOffers.map((offer) =>
+        offer.id === payload.new.id
+          ? { ...offer, ...payload.new }
+          : offer
+      );
+    }
+
+    if (payload.eventType === "DELETE") {
+      return currentOffers.filter(
+        (offer) => offer.id !== payload.old.id
+      );
+    }
+
+    return currentOffers;
+  });
+}
         },
       )
       .subscribe();
