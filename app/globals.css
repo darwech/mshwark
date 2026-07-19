@@ -2933,3 +2933,15 @@ header {
     min-width: 100%;
   }
 }
+.authError {
+  margin: 10px 0 14px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  color: #be123c;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: right;
+  line-height: 1.6;
+}
