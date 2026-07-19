@@ -131,6 +131,7 @@ const [confirmNewPassword, setConfirmNewPassword] = useState("");
           id,
           full_name,
           phone,
+          avatar_url,
           trust_level,
           completed_orders,
           cancelled_orders,
@@ -1011,6 +1012,51 @@ const [selectedDriverId, setSelectedDriverId] =
 
   loadOffers();
 }, [orders, profile?.id]);
+useEffect(() => {
+  if (!profile?.id) return;
+
+  const channel = supabase
+    .channel(`order-offers-realtime-${profile.id}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "order_offers",
+      },
+      () => {
+        console.log("🔄 عروض المندوبين اتغيرت");
+
+        const loadRealtimeOffers = async () => {
+          const orderIds = orders.map((order) => order.id);
+
+          if (orderIds.length === 0) {
+            setOrderOffers([]);
+            return;
+          }
+
+          const { data, error } = await supabase
+            .from("order_offers")
+            .select("*")
+            .in("order_id", orderIds)
+            .order("created_at", {
+              ascending: false,
+            });
+
+          if (!error) {
+            setOrderOffers(data || []);
+          }
+        };
+
+        loadRealtimeOffers();
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, [profile?.id, orders]);
   const [
     showAllOrders,
     setShowAllOrders,
@@ -2804,32 +2850,63 @@ function OrderCard({
 ========================================= */}
 
 
-        <p>
+       {customer && o.driver && (
+  <div className="driverInfoCard">
+
+    <div className="driverInfoHeader">
+      {o.driver.avatar_url ? (
+        <img
+          src={o.driver.avatar_url}
+          alt={o.driver.full_name || "المندوب"}
+          className="driverAvatar"
+        />
+      ) : (
+        <div className="driverAvatarFallback">
+          👤
+        </div>
+      )}
+
+      <div>
+        <small>المندوب المسؤول عن طلبك</small>
+
+        <h3>
+          {o.driver.full_name || "المندوب"}
+        </h3>
+
+        <div>
+          ⭐ {Number(o.driver.rating || 0).toFixed(1)}
+          {o.driver.rating_count
+            ? ` (${o.driver.rating_count} تقييم)`
+            : ""}
+        </div>
+      </div>
+    </div>
+
+    <div className="driverInfoDetails">
+
+      {o.driver.phone && (
+        <a href={`tel:${o.driver.phone}`}>
           <Phone />
+          <span>{o.driver.phone}</span>
+        </a>
+      )}
 
-          {customer
-            ? o.driver?.phone ||
-              "رقم المندوب غير متاح"
-            : o.customer?.phone ||
-              o.customer_phone}
-        </p>
+      {o.driver.vehicle_type && (
+        <div>
+          <Car />
+          <span>
+            {o.driver.vehicle_type}
+            {o.driver.vehicle_plate
+              ? ` — ${o.driver.vehicle_plate}`
+              : ""}
+          </span>
+        </div>
+      )}
 
-        {customer &&
-          o.driver?.vehicle_type && (
-            <p>
-              <Car />
+    </div>
 
-              {
-                o.driver
-                  .vehicle_type
-              }
-
-              {o.driver
-                .vehicle_plate
-                ? ` — ${o.driver.vehicle_plate}`
-                : ""}
-            </p>
-          )}
+  </div>
+)} 
       </div>
 
       {o.notes && (
@@ -2951,7 +3028,7 @@ function OrderCard({
     <div className="orderOffers">
       <h4>عروض المندوبين</h4>
 
-      {offers.map((item) => {
+     {offers.map((item) => {
   const offerDriver = drivers?.find(
     (d) => d.id === item.driver_id
   );
@@ -2961,33 +3038,52 @@ function OrderCard({
       key={item.id}
       className="offerCard"
     >
-      <div>
-        <strong>
-          {offerDriver?.full_name || "مندوب"}
-        </strong>
+      <div className="offerDriver">
 
-        <div>
-          {offerDriver?.vehicle_type || "وسيلة التوصيل غير محددة"}
+        {offerDriver?.avatar_url ? (
+          <img
+            src={offerDriver.avatar_url}
+            alt={offerDriver.full_name || "المندوب"}
+            className="offerAvatar"
+          />
+        ) : (
+          <div className="offerAvatarFallback">
+            👤
+          </div>
+        )}
+
+        <div className="offerDriverData">
+          <strong>
+            {offerDriver?.full_name || "مندوب"}
+          </strong>
+
+          <span>
+            🚗 {offerDriver?.vehicle_type || "وسيلة غير محددة"}
+          </span>
+
+          <span className="offerRating">
+            ⭐ {Number(offerDriver?.rating || 0).toFixed(1)}
+          </span>
         </div>
 
-        <div>
-          ⭐ {Number(offerDriver?.rating || 5).toFixed(1)}
-        </div>
       </div>
 
-      <div>
+      <div className="offerPrice">
         <strong>
-          {Number(item.price)} جنيه
+          {Number(item.price)}
         </strong>
+        <span>جنيه</span>
       </div>
+
       {customer && o.status === "requested" && (
-  <button
-    type="button"
-    className="primary"
-onClick={() => acceptDriverOffer(item)}  >
-    قبول العرض
-  </button>
-)}
+        <button
+          type="button"
+          className="offerAcceptButton"
+          onClick={() => acceptDriverOffer(item)}
+        >
+          قبول العرض
+        </button>
+      )}
     </div>
   );
 })}
