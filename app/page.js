@@ -772,72 +772,151 @@ function Header({ profile, logout, openAccount }) {
 
       <div className="headActions">
         <button
-          className="icon"
-          title="تفعيل الإشعارات"
-          onClick={async () => {
-            try {
-              if (
-                !("Notification" in window) ||
-                !("serviceWorker" in navigator) ||
-                !("PushManager" in window)
-              ) {
-                alert("جهازك أو المتصفح لا يدعم إشعارات Push");
-                return;
-              }
+  className="icon"
+  title="تفعيل الإشعارات"
+  onClick={async () => {
+    try {
+      // التأكد إن الحساب موجود
+      if (!profile?.id) {
+        alert("يجب تسجيل الدخول أولًا");
+        return;
+      }
 
-              const permission = await Notification.requestPermission();
+      // التأكد إن الجهاز يدعم Push Notifications
+      if (
+        !("Notification" in window) ||
+        !("serviceWorker" in navigator) ||
+        !("PushManager" in window)
+      ) {
+        alert("جهازك أو المتصفح لا يدعم إشعارات Push");
+        return;
+      }
 
-              if (permission !== "granted") {
-                alert("لازم تسمح بالإشعارات علشان توصلك تحديثات مشوارك");
-                return;
-              }
+      // طلب إذن الإشعارات
+      const permission = await Notification.requestPermission();
 
-              const registration = await navigator.serviceWorker.ready;
+      if (permission !== "granted") {
+        alert(
+          "لازم تسمح بالإشعارات علشان توصلك تحديثات مشوارك"
+        );
+        return;
+      }
 
-              let subscription =
-                await registration.pushManager.getSubscription();
+      // انتظار Service Worker
+      const registration =
+        await navigator.serviceWorker.ready;
 
-              if (!subscription) {
-                subscription = await registration.pushManager.subscribe({
-                  userVisibleOnly: true,
-                  applicationServerKey: urlBase64ToUint8Array(
-                    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-                  ),
-                });
-              }
+      // البحث عن اشتراك موجود على نفس الجهاز
+      let subscription =
+        await registration.pushManager.getSubscription();
 
-              const json = subscription.toJSON();
+      // إنشاء اشتراك لو مفيش
+      if (!subscription) {
+        const publicKey =
+          process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
-              const { error } = await supabase
-                .from("push_subscriptions")
-                .upsert(
-                  {
-                    user_id: profile.id,
-                    endpoint: subscription.endpoint,
-                    p256dh: json.keys.p256dh,
-                    auth: json.keys.auth,
-                  },
-                  {
-                    onConflict: "endpoint",
-                  },
-                );
+        if (!publicKey) {
+          throw new Error(
+            "VAPID Public Key غير موجود"
+          );
+        }
 
-              if (error) {
-                console.error("PUSH SAVE ERROR:", error);
-                alert("حدث خطأ أثناء تفعيل الإشعارات");
-                return;
-              }
+        subscription =
+          await registration.pushManager.subscribe({
+            userVisibleOnly: true,
 
-              console.log("PUSH SUBSCRIPTION SAVED:", subscription);
-              alert("تم تفعيل إشعارات مشوارك بنجاح 🔔");
-            } catch (error) {
-              console.error("PUSH SUBSCRIPTION ERROR:", error);
-              alert("تعذر تفعيل الإشعارات: " + error.message);
-            }
-          }}
-        >
-          🔔
-        </button>
+            applicationServerKey:
+              urlBase64ToUint8Array(publicKey),
+          });
+      }
+
+      const json = subscription.toJSON();
+
+      if (
+        !subscription.endpoint ||
+        !json.keys?.p256dh ||
+        !json.keys?.auth
+      ) {
+        throw new Error(
+          "بيانات Push Subscription غير مكتملة"
+        );
+      }
+
+      // نحصل على Session الحالية
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (
+        sessionError ||
+        !session?.access_token
+      ) {
+        throw new Error(
+          "جلسة تسجيل الدخول غير صالحة"
+        );
+      }
+
+      // إرسال الاشتراك للسيرفر
+      const response = await fetch(
+        "/api/push/subscribe",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json",
+
+            Authorization:
+              `Bearer ${session.access_token}`,
+          },
+
+          body: JSON.stringify({
+            endpoint: subscription.endpoint,
+
+            p256dh: json.keys.p256dh,
+
+            auth: json.keys.auth,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error(
+          "PUSH SAVE ERROR:",
+          result
+        );
+
+        throw new Error(
+          result.error ||
+            "فشل حفظ اشتراك الإشعارات"
+        );
+      }
+
+      console.log(
+        "PUSH SUBSCRIPTION SAVED:",
+        result
+      );
+
+      alert(
+        "تم تفعيل إشعارات مشوارك بنجاح 🔔"
+      );
+    } catch (error) {
+      console.error(
+        "PUSH SUBSCRIPTION ERROR:",
+        error
+      );
+
+      alert(
+        "تعذر تفعيل الإشعارات: " +
+          (error?.message || "خطأ غير معروف")
+      );
+    }
+  }}
+>
+  🔔
+</button>
         <div className="hello">أهلاً، {profile.full_name?.split(" ")[0]}</div>
 
         <button className="icon" onClick={openAccount} title="حسابي">
