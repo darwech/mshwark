@@ -1472,7 +1472,7 @@ if (belongsToMyOrders) {
         >
           <Car size={42} />
 
-          <b>محمود</b>
+          <b>توصيلة</b>
 
           <span>عايز تروح مكان؟ اطلب توصيلة مناسبة ليك.</span>
         </button>
