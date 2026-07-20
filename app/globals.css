@@ -576,7 +576,7 @@ body.keyboard-open .modal { margin-top: 6px; }
   border-radius: 18px; padding: 21px; margin-bottom: 14px;
   box-shadow: var(--shadow-card);
 }
-.driverManageTop { display: flex; align-items: center; gap: 14px; padding-bottom: 17px; border-bottom: 1px solid var(--mist); }
+.driverManageTop { display: flex; align-items: center; gap: 14px; padding-bottom: 17px; border-bottom: 1px solid var(--mist); flex-wrap: wrap; }
 .driverManageTop .driverAvatar {
   width: 52px; height: 52px; flex-shrink: 0; border-radius: 15px;
   background: var(--purple-tint); color: var(--purple); border: 0;

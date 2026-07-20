@@ -2744,6 +2744,15 @@ function Admin({ logout, flash }) {
 
   const [showAllOrders, setShowAllOrders] = useState(false);
 
+  const [expandedDrivers, setExpandedDrivers] = useState({});
+
+  function toggleDriverDetails(driverId) {
+    setExpandedDrivers((current) => ({
+      ...current,
+      [driverId]: !current[driverId],
+    }));
+  }
+
   async function load() {
     const { data: profileData, error: profileError } = await supabase
       .from("profiles")
@@ -3069,7 +3078,85 @@ function Admin({ logout, flash }) {
                     {driver.completed_orders || 0} مشوار مكتمل
                   </small>
                 </div>
+
+                <button
+                  className="ghost"
+                  style={{ marginInlineStart: "auto", width: "auto" }}
+                  onClick={() => toggleDriverDetails(driver.id)}
+                >
+                  {expandedDrivers[driver.id] ? (
+                    <>
+                      <ChevronUp />
+                      إخفاء التفاصيل
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown />
+                      عرض التفاصيل الكاملة
+                    </>
+                  )}
+                </button>
               </div>
+
+              {expandedDrivers[driver.id] && (
+                <div className="driverVerification" style={{ marginTop: 14 }}>
+                  <div>
+                    <small>📞 {driver.phone || "غير مسجل"}</small>
+
+                    {driver.vehicle_plate && (
+                      <small>🔢 اللوحة: {driver.vehicle_plate}</small>
+                    )}
+
+                    <small>
+                      🪪 الرقم القومي: {driver.national_id || "غير مسجل"}
+                    </small>
+                  </div>
+
+                  <div className="documentButtons">
+                    <button
+                      className="ghost"
+                      onClick={() =>
+                        showDocument(driver.id, driver.id_card_front, "front")
+                      }
+                    >
+                      <FileText />
+                      البطاقة أمامي
+                    </button>
+
+                    <button
+                      className="ghost"
+                      onClick={() =>
+                        showDocument(driver.id, driver.id_card_back, "back")
+                      }
+                    >
+                      <FileText />
+                      البطاقة خلفي
+                    </button>
+                  </div>
+
+                  {documentUrls[`${driver.id}-front`] && (
+                    <div className="documentPreview">
+                      <span>الوجه الأمامي</span>
+
+                      <img
+                        src={documentUrls[`${driver.id}-front`]}
+                        alt="البطاقة الأمامية"
+                      />
+                    </div>
+                  )}
+
+                  {documentUrls[`${driver.id}-back`] && (
+                    <div className="documentPreview">
+                      <span>الوجه الخلفي</span>
+
+                      <img
+                        src={documentUrls[`${driver.id}-back`]}
+                        alt="البطاقة الخلفية"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="servicePermissions">
                 <button
