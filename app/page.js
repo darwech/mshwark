@@ -943,6 +943,17 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
   useEffect(() => {
   if (!show) return;
 
+  const viewport = window.visualViewport;
+
+  function updateModalHeight() {
+    if (!viewport) return;
+
+    document.documentElement.style.setProperty(
+      "--app-visible-height",
+      `${viewport.height}px`
+    );
+  }
+
   function handleFocus(event) {
     const field = event.target;
 
@@ -955,20 +966,50 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
     }
 
     setTimeout(() => {
-      field.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-        inline: "nearest",
-      });
-    }, 350);
+      const modal = field.closest(".modal");
+
+      if (!modal) return;
+
+      const fieldRect = field.getBoundingClientRect();
+      const visibleHeight = window.visualViewport
+        ? window.visualViewport.height
+        : window.innerHeight;
+
+      const safeBottom = visibleHeight - 80;
+
+      if (fieldRect.bottom > safeBottom) {
+        modal.scrollBy({
+          top: fieldRect.bottom - safeBottom + 100,
+          behavior: "smooth",
+        });
+      } else {
+        field.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }
+    }, 400);
   }
+
+  updateModalHeight();
+
+  viewport?.addEventListener("resize", updateModalHeight);
+  viewport?.addEventListener("scroll", updateModalHeight);
 
   document.addEventListener("focusin", handleFocus);
 
   return () => {
+    viewport?.removeEventListener("resize", updateModalHeight);
+    viewport?.removeEventListener("scroll", updateModalHeight);
+
     document.removeEventListener("focusin", handleFocus);
+
+    document.documentElement.style.removeProperty(
+      "--app-visible-height"
+    );
   };
 }, [show]);
+  
   useEffect(() => {
     async function loadOffers() {
       if (!profile?.id) return;
