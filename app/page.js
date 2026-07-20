@@ -1339,41 +1339,45 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
       return;
     }
     // إرسال Push للمندوبين عند إنشاء طلب جديد
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+    // من غير await عمدًا — عشان المستخدم يشوف نتيجة الطلب فورًا
+    // من غير ما ينتظر إرسال الإشعارات لكل المناديب في الخلفية
+    (async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-      if (session?.access_token) {
-        const serviceNames = {
-          purchase: "شراء",
-          delivery: "توصيل",
-          ride: "مشوار",
-        };
+        if (session?.access_token) {
+          const serviceNames = {
+            purchase: "شراء",
+            delivery: "توصيل",
+            ride: "مشوار",
+          };
 
-        const serviceName = serviceNames[serviceType] || "طلب";
+          const serviceName = serviceNames[serviceType] || "طلب";
 
-        const response = await fetch("/api/push", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            title: `🔔 طلب ${serviceName} جديد`,
-            message:
-              "يوجد طلب جديد متاح، افتح مشوارك لمشاهدة التفاصيل وتقديم عرضك.",
-            url: "/",
-          }),
-        });
+          const response = await fetch("/api/push", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              title: `🔔 طلب ${serviceName} جديد`,
+              message:
+                "يوجد طلب جديد متاح، افتح مشوارك لمشاهدة التفاصيل وتقديم عرضك.",
+              url: "/",
+            }),
+          });
 
-        const result = await response.json();
+          const result = await response.json();
 
-        console.log("PUSH RESULT:", result);
+          console.log("PUSH RESULT:", result);
+        }
+      } catch (pushError) {
+        console.error("PUSH REQUEST ERROR:", pushError);
       }
-    } catch (pushError) {
-      console.error("PUSH REQUEST ERROR:", pushError);
-    }
+    })();
 
     /* =========================================
      نجاح
@@ -1906,29 +1910,32 @@ function Driver({ profile, orders, refresh, flash }) {
       return;
     }
 
-    // إشعار العميل بالسعر الجديد أو المعدّل
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+    // إشعار العميل بالسعر الجديد أو المعدّل (من غير await، عشان المندوب
+    // يشوف نتيجة إرسال السعر فورًا)
+    (async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-      if (session?.access_token) {
-        await fetch("/api/push/offer", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            orderId,
-            price: Number(fee),
-            isUpdate: Boolean(existingOffer),
-          }),
-        });
+        if (session?.access_token) {
+          await fetch("/api/push/offer", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              orderId,
+              price: Number(fee),
+              isUpdate: Boolean(existingOffer),
+            }),
+          });
+        }
+      } catch (pushError) {
+        console.error("PUSH OFFER REQUEST ERROR:", pushError);
       }
-    } catch (pushError) {
-      console.error("PUSH OFFER REQUEST ERROR:", pushError);
-    }
+    })();
 
     flash("تم إرسال السعر للعميل");
 
