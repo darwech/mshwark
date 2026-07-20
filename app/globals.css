@@ -506,7 +506,14 @@ header {
   padding: 20px; overflow-y: auto;
   display: flex; justify-content: center; align-items: flex-start;
   animation: overlayFade .2s ease-out;
+  transition: padding-bottom .2s ease;
+  /* بيتغير قيمته لايف عن طريق Keyboard plugin جوه تطبيق الـ APK */
+  padding-bottom: var(--keyboard-height, 20px);
 }
+
+/* لما الكيبورد يفتح جوه التطبيق (Capacitor فقط، مفيش تأثير على الموقع العادي) */
+body.keyboard-open .overlay { align-items: flex-start; }
+body.keyboard-open .modal { margin-top: 6px; }
 @keyframes overlayFade { from { opacity: 0; } to { opacity: 1; } }
 
 .modal {
