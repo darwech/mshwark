@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { Keyboard } from "@capacitor/keyboard";
 import {
   Bike,
   Package,
@@ -943,69 +944,64 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
   useEffect(() => {
   if (!show) return;
 
-  const viewport = window.visualViewport;
+  let showListener;
+  let hideListener;
 
-  function updateModalHeight() {
-    if (!viewport) return;
+  async function setupKeyboard() {
+    try {
+      showListener = await Keyboard.addListener(
+        "keyboardWillShow",
+        (info) => {
+          document.documentElement.style.setProperty(
+            "--keyboard-height",
+            `${info.keyboardHeight}px`
+          );
 
-    document.documentElement.style.setProperty(
-      "--app-visible-height",
-      `${viewport.height}px`
-    );
-  }
+          document.body.classList.add("keyboard-open");
 
-  function handleFocus(event) {
-    const field = event.target;
+          setTimeout(() => {
+            const active = document.activeElement;
 
-    if (
-      !field.matches(
-        ".modal input, .modal textarea, .modal select"
-      )
-    ) {
-      return;
+            if (
+              active &&
+              active.matches(".modal input, .modal textarea, .modal select")
+            ) {
+              active.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+              });
+            }
+          }, 250);
+        }
+      );
+
+      hideListener = await Keyboard.addListener(
+        "keyboardWillHide",
+        () => {
+          document.documentElement.style.setProperty(
+            "--keyboard-height",
+            "0px"
+          );
+
+          document.body.classList.remove("keyboard-open");
+        }
+      );
+    } catch (error) {
+      console.log("Keyboard plugin unavailable:", error);
     }
-
-    setTimeout(() => {
-      const modal = field.closest(".modal");
-
-      if (!modal) return;
-
-      const fieldRect = field.getBoundingClientRect();
-      const visibleHeight = window.visualViewport
-        ? window.visualViewport.height
-        : window.innerHeight;
-
-      const safeBottom = visibleHeight - 80;
-
-      if (fieldRect.bottom > safeBottom) {
-        modal.scrollBy({
-          top: fieldRect.bottom - safeBottom + 100,
-          behavior: "smooth",
-        });
-      } else {
-        field.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
-      }
-    }, 400);
   }
 
-  updateModalHeight();
-
-  viewport?.addEventListener("resize", updateModalHeight);
-  viewport?.addEventListener("scroll", updateModalHeight);
-
-  document.addEventListener("focusin", handleFocus);
+  setupKeyboard();
 
   return () => {
-    viewport?.removeEventListener("resize", updateModalHeight);
-    viewport?.removeEventListener("scroll", updateModalHeight);
+    showListener?.remove();
+    hideListener?.remove();
 
-    document.removeEventListener("focusin", handleFocus);
+    document.body.classList.remove("keyboard-open");
 
-    document.documentElement.style.removeProperty(
-      "--app-visible-height"
+    document.documentElement.style.setProperty(
+      "--keyboard-height",
+      "0px"
     );
   };
 }, [show]);
