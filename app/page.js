@@ -116,16 +116,30 @@ export default function Home() {
   }
 
   async function loadProfile(user) {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .single();
+  const userId = user.id;
 
-    if (!error) {
-      setProfile(data || null);
-    }
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .single();
+
+  if (error) {
+    console.error("Profile load error:", error);
+    return;
   }
+
+  // نتأكد إن الحساب لم يتغير أثناء تحميل بيانات الـ profile
+  const {
+    data: { session: latestSession },
+  } = await supabase.auth.getSession();
+
+  if (!latestSession || latestSession.user.id !== userId) {
+    return;
+  }
+
+  setProfile(data || null);
+}
 
   async function refresh() {
     if (!session?.user) return;
@@ -274,6 +288,16 @@ export default function Home() {
       supabase.removeChannel(channel);
     };
   }, [session]);
+  async function handleLogout() {
+    setProfile(null);
+    setSession(null);
+
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      console.error("Logout error:", error);
+    }
+  }
 
   if (loading) {
     return <div className="center">جاري تحميل مشوارك...</div>;
@@ -288,14 +312,14 @@ export default function Home() {
   }
 
   if (profile.role === "admin") {
-    return <Admin logout={() => supabase.auth.signOut()} flash={flash} />;
+    return <Admin logout={handleLogout} flash={flash} />;
   }
 
   return (
     <div className="shell">
       <Header
         profile={profile}
-        logout={() => supabase.auth.signOut()}
+        logout={handleLogout}
         openAccount={() => setShowAccount(true)}
       />
       {showAccount && (
@@ -797,14 +821,14 @@ function Header({ profile, logout, openAccount }) {
           } catch (error) {
             console.error("FCM TOKEN SAVE ERROR:", error);
           }
-        }
+        },
       );
 
       errorListener = await PushNotifications.addListener(
         "registrationError",
         (error) => {
           console.error("FCM REGISTRATION ERROR:", error);
-        }
+        },
       );
     }
 
@@ -825,176 +849,146 @@ function Header({ profile, logout, openAccount }) {
 
       <div className="headActions">
         <button
-  className="icon"
-  title="تفعيل الإشعارات"
-  onClick={async () => {
-    try {
-      // التأكد إن الحساب موجود
-      if (!profile?.id) {
-        alert("يجب تسجيل الدخول أولًا");
-        return;
-      }
+          className="icon"
+          title="تفعيل الإشعارات"
+          onClick={async () => {
+            try {
+              // التأكد إن الحساب موجود
+              if (!profile?.id) {
+                alert("يجب تسجيل الدخول أولًا");
+                return;
+              }
 
-      // ============ داخل تطبيق الموبايل (APK) ============
-      if (Capacitor.isNativePlatform()) {
-        const currentPerm = await PushNotifications.checkPermissions();
-        let finalPerm = currentPerm.receive;
+              // ============ داخل تطبيق الموبايل (APK) ============
+              if (Capacitor.isNativePlatform()) {
+                const currentPerm = await PushNotifications.checkPermissions();
+                let finalPerm = currentPerm.receive;
 
-        if (finalPerm === "prompt" || finalPerm === "prompt-with-rationale") {
-          const requested = await PushNotifications.requestPermissions();
-          finalPerm = requested.receive;
-        }
+                if (
+                  finalPerm === "prompt" ||
+                  finalPerm === "prompt-with-rationale"
+                ) {
+                  const requested =
+                    await PushNotifications.requestPermissions();
+                  finalPerm = requested.receive;
+                }
 
-        if (finalPerm !== "granted") {
-          alert("لازم تسمح بالإشعارات علشان توصلك تحديثات مشوارك");
-          return;
-        }
+                if (finalPerm !== "granted") {
+                  alert("لازم تسمح بالإشعارات علشان توصلك تحديثات مشوارك");
+                  return;
+                }
 
-        // ده بيشغل الـ listener اللي مسجل فوق في useEffect
-        // وهو اللي بيحفظ التوكن على السيرفر أول ما يوصل
-        await PushNotifications.register();
+                // ده بيشغل الـ listener اللي مسجل فوق في useEffect
+                // وهو اللي بيحفظ التوكن على السيرفر أول ما يوصل
+                await PushNotifications.register();
 
-        alert("تم تفعيل إشعارات مشوارك بنجاح 🔔");
-        return;
-      }
+                alert("تم تفعيل إشعارات مشوارك بنجاح 🔔");
+                return;
+              }
 
-      // ============ على المتصفح (الموقع العادي) ============
+              // ============ على المتصفح (الموقع العادي) ============
 
-      // التأكد إن الجهاز يدعم Push Notifications
-      if (
-        !("Notification" in window) ||
-        !("serviceWorker" in navigator) ||
-        !("PushManager" in window)
-      ) {
-        alert("جهازك أو المتصفح لا يدعم إشعارات Push");
-        return;
-      }
+              // التأكد إن الجهاز يدعم Push Notifications
+              if (
+                !("Notification" in window) ||
+                !("serviceWorker" in navigator) ||
+                !("PushManager" in window)
+              ) {
+                alert("جهازك أو المتصفح لا يدعم إشعارات Push");
+                return;
+              }
 
-      // طلب إذن الإشعارات
-      const permission = await Notification.requestPermission();
+              // طلب إذن الإشعارات
+              const permission = await Notification.requestPermission();
 
-      if (permission !== "granted") {
-        alert(
-          "لازم تسمح بالإشعارات علشان توصلك تحديثات مشوارك"
-        );
-        return;
-      }
+              if (permission !== "granted") {
+                alert("لازم تسمح بالإشعارات علشان توصلك تحديثات مشوارك");
+                return;
+              }
 
-      // انتظار Service Worker
-      const registration =
-        await navigator.serviceWorker.ready;
+              // انتظار Service Worker
+              const registration = await navigator.serviceWorker.ready;
 
-      // البحث عن اشتراك موجود على نفس الجهاز
-      let subscription =
-        await registration.pushManager.getSubscription();
+              // البحث عن اشتراك موجود على نفس الجهاز
+              let subscription =
+                await registration.pushManager.getSubscription();
 
-      // إنشاء اشتراك لو مفيش
-      if (!subscription) {
-        const publicKey =
-          process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+              // إنشاء اشتراك لو مفيش
+              if (!subscription) {
+                const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
-        if (!publicKey) {
-          throw new Error(
-            "VAPID Public Key غير موجود"
-          );
-        }
+                if (!publicKey) {
+                  throw new Error("VAPID Public Key غير موجود");
+                }
 
-        subscription =
-          await registration.pushManager.subscribe({
-            userVisibleOnly: true,
+                subscription = await registration.pushManager.subscribe({
+                  userVisibleOnly: true,
 
-            applicationServerKey:
-              urlBase64ToUint8Array(publicKey),
-          });
-      }
+                  applicationServerKey: urlBase64ToUint8Array(publicKey),
+                });
+              }
 
-      const json = subscription.toJSON();
+              const json = subscription.toJSON();
 
-      if (
-        !subscription.endpoint ||
-        !json.keys?.p256dh ||
-        !json.keys?.auth
-      ) {
-        throw new Error(
-          "بيانات Push Subscription غير مكتملة"
-        );
-      }
+              if (
+                !subscription.endpoint ||
+                !json.keys?.p256dh ||
+                !json.keys?.auth
+              ) {
+                throw new Error("بيانات Push Subscription غير مكتملة");
+              }
 
-      // نحصل على Session الحالية
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
+              // نحصل على Session الحالية
+              const {
+                data: { session },
+                error: sessionError,
+              } = await supabase.auth.getSession();
 
-      if (
-        sessionError ||
-        !session?.access_token
-      ) {
-        throw new Error(
-          "جلسة تسجيل الدخول غير صالحة"
-        );
-      }
+              if (sessionError || !session?.access_token) {
+                throw new Error("جلسة تسجيل الدخول غير صالحة");
+              }
 
-      // إرسال الاشتراك للسيرفر
-      const response = await fetch(
-        "/api/push/subscribe",
-        {
-          method: "POST",
+              // إرسال الاشتراك للسيرفر
+              const response = await fetch("/api/push/subscribe", {
+                method: "POST",
 
-          headers: {
-            "Content-Type": "application/json",
+                headers: {
+                  "Content-Type": "application/json",
 
-            Authorization:
-              `Bearer ${session.access_token}`,
-          },
+                  Authorization: `Bearer ${session.access_token}`,
+                },
 
-          body: JSON.stringify({
-            endpoint: subscription.endpoint,
+                body: JSON.stringify({
+                  endpoint: subscription.endpoint,
 
-            p256dh: json.keys.p256dh,
+                  p256dh: json.keys.p256dh,
 
-            auth: json.keys.auth,
-          }),
-        }
-      );
+                  auth: json.keys.auth,
+                }),
+              });
 
-      const result = await response.json();
+              const result = await response.json();
 
-      if (!response.ok) {
-        console.error(
-          "PUSH SAVE ERROR:",
-          result
-        );
+              if (!response.ok) {
+                console.error("PUSH SAVE ERROR:", result);
 
-        throw new Error(
-          result.error ||
-            "فشل حفظ اشتراك الإشعارات"
-        );
-      }
+                throw new Error(result.error || "فشل حفظ اشتراك الإشعارات");
+              }
 
-      console.log(
-        "PUSH SUBSCRIPTION SAVED:",
-        result
-      );
+              console.log("PUSH SUBSCRIPTION SAVED:", result);
 
-      alert(
-        "تم تفعيل إشعارات مشوارك بنجاح 🔔"
-      );
-    } catch (error) {
-      console.error(
-        "PUSH SUBSCRIPTION ERROR:",
-        error
-      );
+              alert("تم تفعيل إشعارات مشوارك بنجاح 🔔");
+            } catch (error) {
+              console.error("PUSH SUBSCRIPTION ERROR:", error);
 
-      alert(
-        "تعذر تفعيل الإشعارات: " +
-          (error?.message || "خطأ غير معروف")
-      );
-    }
-  }}
->
-  🔔
-</button>
+              alert(
+                "تعذر تفعيل الإشعارات: " + (error?.message || "خطأ غير معروف"),
+              );
+            }
+          }}
+        >
+          🔔
+        </button>
         <div className="hello">أهلاً، {profile.full_name?.split(" ")[0]}</div>
 
         <button className="icon" onClick={openAccount} title="حسابي">
@@ -1019,70 +1013,64 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
   const [serviceType, setServiceType] = useState(null);
   const [orderOffers, setOrderOffers] = useState([]);
   useEffect(() => {
-  if (!show) return;
+    if (!show) return;
 
-  let showListener;
-  let hideListener;
+    let showListener;
+    let hideListener;
 
-  async function setupKeyboard() {
-    try {
-      showListener = await Keyboard.addListener(
-        "keyboardWillShow",
-        (info) => {
+    async function setupKeyboard() {
+      try {
+        showListener = await Keyboard.addListener(
+          "keyboardWillShow",
+          (info) => {
+            document.documentElement.style.setProperty(
+              "--keyboard-height",
+              `${info.keyboardHeight}px`,
+            );
+
+            document.body.classList.add("keyboard-open");
+
+            setTimeout(() => {
+              const active = document.activeElement;
+
+              if (
+                active &&
+                active.matches(".modal input, .modal textarea, .modal select")
+              ) {
+                active.scrollIntoView({
+                  behavior: "smooth",
+                  block: "center",
+                });
+              }
+            }, 250);
+          },
+        );
+
+        hideListener = await Keyboard.addListener("keyboardWillHide", () => {
           document.documentElement.style.setProperty(
             "--keyboard-height",
-            `${info.keyboardHeight}px`
-          );
-
-          document.body.classList.add("keyboard-open");
-
-          setTimeout(() => {
-            const active = document.activeElement;
-
-            if (
-              active &&
-              active.matches(".modal input, .modal textarea, .modal select")
-            ) {
-              active.scrollIntoView({
-                behavior: "smooth",
-                block: "center",
-              });
-            }
-          }, 250);
-        }
-      );
-
-      hideListener = await Keyboard.addListener(
-        "keyboardWillHide",
-        () => {
-          document.documentElement.style.setProperty(
-            "--keyboard-height",
-            "0px"
+            "0px",
           );
 
           document.body.classList.remove("keyboard-open");
-        }
-      );
-    } catch (error) {
-      console.log("Keyboard plugin unavailable:", error);
+        });
+      } catch (error) {
+        console.log("Keyboard plugin unavailable:", error);
+      }
     }
-  }
 
-  setupKeyboard();
+    setupKeyboard();
 
-  return () => {
-    showListener?.remove();
-    hideListener?.remove();
+    return () => {
+      showListener?.remove();
+      hideListener?.remove();
 
-    document.body.classList.remove("keyboard-open");
+      document.body.classList.remove("keyboard-open");
 
-    document.documentElement.style.setProperty(
-      "--keyboard-height",
-      "0px"
-    );
-  };
-}, [show]);
-  
+      document.documentElement.style.setProperty("--keyboard-height", "0px");
+    };
+  }, [show]);
+
   useEffect(() => {
     async function loadOffers() {
       if (!profile?.id) return;
@@ -1154,46 +1142,46 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
           }
 
           const affectedOrderId =
-  payload.new?.order_id || payload.old?.order_id;
+            payload.new?.order_id || payload.old?.order_id;
 
-const belongsToMyOrders = orders.some(
-  (order) => order.id === affectedOrderId
-);
+          const belongsToMyOrders = orders.some(
+            (order) => order.id === affectedOrderId,
+          );
 
-if (belongsToMyOrders) {
-  setOrderOffers((currentOffers) => {
-    if (payload.eventType === "INSERT") {
-      const alreadyExists = currentOffers.some(
-        (offer) => offer.id === payload.new.id
-      );
+          if (belongsToMyOrders) {
+            setOrderOffers((currentOffers) => {
+              if (payload.eventType === "INSERT") {
+                const alreadyExists = currentOffers.some(
+                  (offer) => offer.id === payload.new.id,
+                );
 
-      if (alreadyExists) return currentOffers;
+                if (alreadyExists) return currentOffers;
 
-      return [payload.new, ...currentOffers];
-    }
+                return [payload.new, ...currentOffers];
+              }
 
-    if (payload.eventType === "UPDATE") {
-      return currentOffers.map((offer) =>
-        offer.id === payload.new.id
-          ? { ...offer, ...payload.new }
-          : offer
-      );
-    }
+              if (payload.eventType === "UPDATE") {
+                return currentOffers.map((offer) =>
+                  offer.id === payload.new.id
+                    ? { ...offer, ...payload.new }
+                    : offer,
+                );
+              }
 
-    if (payload.eventType === "DELETE") {
-      return currentOffers.filter(
-        (offer) => offer.id !== payload.old.id
-      );
-    }
+              if (payload.eventType === "DELETE") {
+                return currentOffers.filter(
+                  (offer) => offer.id !== payload.old.id,
+                );
+              }
 
-    return currentOffers;
-  });
-}
+              return currentOffers;
+            });
+          }
         },
       )
-.subscribe((status) => {
-  console.log("📡 REALTIME STATUS:", status);
-});
+      .subscribe((status) => {
+        console.log("📡 REALTIME STATUS:", status);
+      });
     return () => {
       supabase.removeChannel(channel);
     };
