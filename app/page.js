@@ -941,6 +941,35 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
   const [serviceType, setServiceType] = useState(null);
   const [orderOffers, setOrderOffers] = useState([]);
   useEffect(() => {
+  if (!show) return;
+
+  function handleFocus(event) {
+    const field = event.target;
+
+    if (
+      !field.matches(
+        ".modal input, .modal textarea, .modal select"
+      )
+    ) {
+      return;
+    }
+
+    setTimeout(() => {
+      field.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "nearest",
+      });
+    }, 350);
+  }
+
+  document.addEventListener("focusin", handleFocus);
+
+  return () => {
+    document.removeEventListener("focusin", handleFocus);
+  };
+}, [show]);
+  useEffect(() => {
     async function loadOffers() {
       if (!profile?.id) return;
 

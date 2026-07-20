@@ -1,0 +1,9 @@
+{
+  "appId": "com.mshwark.app",
+  "appName": "مشوارك",
+  "webDir": "public",
+  "server": {
+    "url": "https://mshwark-two.vercel.app",
+    "cleartext": false
+  }
+}
