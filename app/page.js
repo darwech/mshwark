@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { Keyboard } from "@capacitor/keyboard";
+import { Capacitor } from "@capacitor/core";
+import { PushNotifications } from "@capacitor/push-notifications";
 import {
   Bike,
   Package,
@@ -764,6 +766,56 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 function Header({ profile, logout, openAccount }) {
+  // تسجيل توكن إشعارات الموبايل (FCM) أول ما يوصل من النظام
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform() || !profile?.id) return;
+
+    let registrationListener;
+    let errorListener;
+
+    async function setupFcmListeners() {
+      registrationListener = await PushNotifications.addListener(
+        "registration",
+        async (tokenResult) => {
+          try {
+            const {
+              data: { session },
+            } = await supabase.auth.getSession();
+
+            if (!session?.access_token) return;
+
+            await fetch("/api/push/fcm-subscribe", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({ token: tokenResult.value }),
+            });
+
+            console.log("FCM TOKEN SAVED");
+          } catch (error) {
+            console.error("FCM TOKEN SAVE ERROR:", error);
+          }
+        }
+      );
+
+      errorListener = await PushNotifications.addListener(
+        "registrationError",
+        (error) => {
+          console.error("FCM REGISTRATION ERROR:", error);
+        }
+      );
+    }
+
+    setupFcmListeners();
+
+    return () => {
+      registrationListener?.remove();
+      errorListener?.remove();
+    };
+  }, [profile?.id]);
+
   return (
     <header>
       <div className="logo">
@@ -782,6 +834,31 @@ function Header({ profile, logout, openAccount }) {
         alert("يجب تسجيل الدخول أولًا");
         return;
       }
+
+      // ============ داخل تطبيق الموبايل (APK) ============
+      if (Capacitor.isNativePlatform()) {
+        const currentPerm = await PushNotifications.checkPermissions();
+        let finalPerm = currentPerm.receive;
+
+        if (finalPerm === "prompt" || finalPerm === "prompt-with-rationale") {
+          const requested = await PushNotifications.requestPermissions();
+          finalPerm = requested.receive;
+        }
+
+        if (finalPerm !== "granted") {
+          alert("لازم تسمح بالإشعارات علشان توصلك تحديثات مشوارك");
+          return;
+        }
+
+        // ده بيشغل الـ listener اللي مسجل فوق في useEffect
+        // وهو اللي بيحفظ التوكن على السيرفر أول ما يوصل
+        await PushNotifications.register();
+
+        alert("تم تفعيل إشعارات مشوارك بنجاح 🔔");
+        return;
+      }
+
+      // ============ على المتصفح (الموقع العادي) ============
 
       // التأكد إن الجهاز يدعم Push Notifications
       if (

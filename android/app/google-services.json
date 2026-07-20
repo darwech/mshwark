@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "676466494345",
+    "project_id": "mshwark-2ebd1",
+    "storage_bucket": "mshwark-2ebd1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:676466494345:android:45fa2fcd39e9196a1d6f58",
+        "android_client_info": {
+          "package_name": "com.mshwark.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCHFCDZIR9BGLPWLJjdY5utjDGRokw_2SA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
