@@ -211,78 +211,42 @@ export default function Home() {
   }
 
   useEffect(() => {
-  let mounted = true;
-  let subscription;
+    let subscription;
 
-  async function initAuth() {
-    try {
-      // شغّل مستمع تغييرات الجلسة أولًا حتى لا نفقد أي حدث
-      // يحدث أثناء استعادة Supabase للجلسة المحفوظة.
+    async function init() {
       const {
-        data: { subscription: authSubscription },
-      } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-        if (!mounted) return;
-
-        console.log("AUTH EVENT:", event);
-
-        setSession(newSession);
-
-        if (newSession?.user) {
-          await loadProfile(newSession.user);
-        } else if (event === "SIGNED_OUT") {
-          setProfile(null);
-        }
-      });
-
-      subscription = authSubscription;
-
-      // استرجاع الجلسة المحفوظة.
-      let {
         data: { session: currentSession },
-        error: sessionError,
       } = await supabase.auth.getSession();
-
-      if (sessionError) {
-        console.error("GET SESSION ERROR:", sessionError);
-      }
-
-      // لو فيه جلسة، حاول تحديثها قبل اعتبار المستخدم مسجل خروج.
-      if (currentSession) {
-        const {
-          data: { session: refreshedSession },
-          error: refreshError,
-        } = await supabase.auth.refreshSession();
-
-        if (!refreshError && refreshedSession) {
-          currentSession = refreshedSession;
-        } else if (refreshError) {
-          console.warn("REFRESH SESSION ERROR:", refreshError);
-        }
-      }
-
-      if (!mounted) return;
 
       setSession(currentSession);
 
-      if (currentSession?.user) {
+      if (currentSession) {
         await loadProfile(currentSession.user);
       }
-    } catch (error) {
-      console.error("AUTH INIT ERROR:", error);
-    } finally {
-      if (mounted) {
-        setLoading(false);
-      }
+
+      setLoading(false);
+
+      const authListener = supabase.auth.onAuthStateChange(
+        async (_, newSession) => {
+          setSession(newSession);
+
+          if (newSession) {
+            await loadProfile(newSession.user);
+          } else {
+            setProfile(null);
+          }
+        },
+      );
+
+      subscription = authListener.data.subscription;
     }
-  }
 
-  initAuth();
+    init();
 
-  return () => {
-    mounted = false;
-    subscription?.unsubscribe();
-  };
-}, []);
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     if (session) {
