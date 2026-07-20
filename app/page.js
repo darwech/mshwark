@@ -5,6 +5,7 @@ import { supabase } from "../lib/supabase";
 import { Keyboard } from "@capacitor/keyboard";
 import { Capacitor } from "@capacitor/core";
 import { PushNotifications } from "@capacitor/push-notifications";
+import AnimatedSplash from "./components/AnimatedSplash";
 import {
   Bike,
   Package,
@@ -300,7 +301,7 @@ export default function Home() {
   }
 
   if (loading) {
-    return <div className="center">جاري تحميل مشوارك...</div>;
+    return <AnimatedSplash message="جاري تحميل مشوارك..." />;
   }
 
   if (!session) {
@@ -308,7 +309,7 @@ export default function Home() {
   }
 
   if (!profile) {
-    return <div className="center">جاري تجهيز حسابك...</div>;
+    return <AnimatedSplash message="جاري تجهيز حسابك..." />;
   }
 
   if (profile.role === "admin") {
