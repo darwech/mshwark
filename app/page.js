@@ -772,151 +772,117 @@ function Header({ profile, logout, openAccount }) {
 
       <div className="headActions">
         <button
-  className="icon"
-  title="تفعيل الإشعارات"
-  onClick={async () => {
-    try {
-      // التأكد إن الحساب موجود
-      if (!profile?.id) {
-        alert("يجب تسجيل الدخول أولًا");
-        return;
-      }
+          className="icon"
+          title="تفعيل الإشعارات"
+          onClick={async () => {
+            try {
+              // التأكد إن الحساب موجود
+              if (!profile?.id) {
+                alert("يجب تسجيل الدخول أولًا");
+                return;
+              }
 
-      // التأكد إن الجهاز يدعم Push Notifications
-      if (
-        !("Notification" in window) ||
-        !("serviceWorker" in navigator) ||
-        !("PushManager" in window)
-      ) {
-        alert("جهازك أو المتصفح لا يدعم إشعارات Push");
-        return;
-      }
+              // التأكد إن الجهاز يدعم Push Notifications
+              if (
+                !("Notification" in window) ||
+                !("serviceWorker" in navigator) ||
+                !("PushManager" in window)
+              ) {
+                alert("جهازك أو المتصفح لا يدعم إشعارات Push");
+                return;
+              }
 
-      // طلب إذن الإشعارات
-      const permission = await Notification.requestPermission();
+              // طلب إذن الإشعارات
+              const permission = await Notification.requestPermission();
 
-      if (permission !== "granted") {
-        alert(
-          "لازم تسمح بالإشعارات علشان توصلك تحديثات مشوارك"
-        );
-        return;
-      }
+              if (permission !== "granted") {
+                alert("لازم تسمح بالإشعارات علشان توصلك تحديثات مشوارك");
+                return;
+              }
 
-      // انتظار Service Worker
-      const registration =
-        await navigator.serviceWorker.ready;
+              // انتظار Service Worker
+              const registration = await navigator.serviceWorker.ready;
 
-      // البحث عن اشتراك موجود على نفس الجهاز
-      let subscription =
-        await registration.pushManager.getSubscription();
+              // البحث عن اشتراك موجود على نفس الجهاز
+              let subscription =
+                await registration.pushManager.getSubscription();
 
-      // إنشاء اشتراك لو مفيش
-      if (!subscription) {
-        const publicKey =
-          process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+              // إنشاء اشتراك لو مفيش
+              if (!subscription) {
+                const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
-        if (!publicKey) {
-          throw new Error(
-            "VAPID Public Key غير موجود"
-          );
-        }
+                if (!publicKey) {
+                  throw new Error("VAPID Public Key غير موجود");
+                }
 
-        subscription =
-          await registration.pushManager.subscribe({
-            userVisibleOnly: true,
+                subscription = await registration.pushManager.subscribe({
+                  userVisibleOnly: true,
 
-            applicationServerKey:
-              urlBase64ToUint8Array(publicKey),
-          });
-      }
+                  applicationServerKey: urlBase64ToUint8Array(publicKey),
+                });
+              }
 
-      const json = subscription.toJSON();
+              const json = subscription.toJSON();
 
-      if (
-        !subscription.endpoint ||
-        !json.keys?.p256dh ||
-        !json.keys?.auth
-      ) {
-        throw new Error(
-          "بيانات Push Subscription غير مكتملة"
-        );
-      }
+              if (
+                !subscription.endpoint ||
+                !json.keys?.p256dh ||
+                !json.keys?.auth
+              ) {
+                throw new Error("بيانات Push Subscription غير مكتملة");
+              }
 
-      // نحصل على Session الحالية
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
+              // نحصل على Session الحالية
+              const {
+                data: { session },
+                error: sessionError,
+              } = await supabase.auth.getSession();
 
-      if (
-        sessionError ||
-        !session?.access_token
-      ) {
-        throw new Error(
-          "جلسة تسجيل الدخول غير صالحة"
-        );
-      }
+              if (sessionError || !session?.access_token) {
+                throw new Error("جلسة تسجيل الدخول غير صالحة");
+              }
 
-      // إرسال الاشتراك للسيرفر
-      const response = await fetch(
-        "/api/push/subscribe",
-        {
-          method: "POST",
+              // إرسال الاشتراك للسيرفر
+              const response = await fetch("/api/push/subscribe", {
+                method: "POST",
 
-          headers: {
-            "Content-Type": "application/json",
+                headers: {
+                  "Content-Type": "application/json",
 
-            Authorization:
-              `Bearer ${session.access_token}`,
-          },
+                  Authorization: `Bearer ${session.access_token}`,
+                },
 
-          body: JSON.stringify({
-            endpoint: subscription.endpoint,
+                body: JSON.stringify({
+                  endpoint: subscription.endpoint,
 
-            p256dh: json.keys.p256dh,
+                  p256dh: json.keys.p256dh,
 
-            auth: json.keys.auth,
-          }),
-        }
-      );
+                  auth: json.keys.auth,
+                }),
+              });
 
-      const result = await response.json();
+              const result = await response.json();
 
-      if (!response.ok) {
-        console.error(
-          "PUSH SAVE ERROR:",
-          result
-        );
+              if (!response.ok) {
+                console.error("PUSH SAVE ERROR:", result);
 
-        throw new Error(
-          result.error ||
-            "فشل حفظ اشتراك الإشعارات"
-        );
-      }
+                throw new Error(result.error || "فشل حفظ اشتراك الإشعارات");
+              }
 
-      console.log(
-        "PUSH SUBSCRIPTION SAVED:",
-        result
-      );
+              console.log("PUSH SUBSCRIPTION SAVED:", result);
 
-      alert(
-        "تم تفعيل إشعارات مشوارك بنجاح 🔔"
-      );
-    } catch (error) {
-      console.error(
-        "PUSH SUBSCRIPTION ERROR:",
-        error
-      );
+              alert("تم تفعيل إشعارات مشوارك بنجاح 🔔");
+            } catch (error) {
+              console.error("PUSH SUBSCRIPTION ERROR:", error);
 
-      alert(
-        "تعذر تفعيل الإشعارات: " +
-          (error?.message || "خطأ غير معروف")
-      );
-    }
-  }}
->
-  🔔
-</button>
+              alert(
+                "تعذر تفعيل الإشعارات: " + (error?.message || "خطأ غير معروف"),
+              );
+            }
+          }}
+        >
+          🔔
+        </button>
         <div className="hello">أهلاً، {profile.full_name?.split(" ")[0]}</div>
 
         <button className="icon" onClick={openAccount} title="حسابي">
@@ -966,7 +932,18 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
     }
 
     loadOffers();
-  }, [orders, profile?.id]);
+
+// تحديث احتياطي كل 5 ثوانٍ لو الـ Realtime وقف
+const fallbackInterval = setInterval(() => {
+  if (document.visibilityState === "visible") {
+    loadOffers();
+  }
+}, 5000);
+
+return () => {
+  clearInterval(fallbackInterval);
+};
+}, [orders, profile?.id]);
   useEffect(() => {
     if (!profile?.id) return;
 
@@ -1011,46 +988,46 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
           }
 
           const affectedOrderId =
-  payload.new?.order_id || payload.old?.order_id;
+            payload.new?.order_id || payload.old?.order_id;
 
-const belongsToMyOrders = orders.some(
-  (order) => order.id === affectedOrderId
-);
+          const belongsToMyOrders = orders.some(
+            (order) => order.id === affectedOrderId,
+          );
 
-if (belongsToMyOrders) {
-  setOrderOffers((currentOffers) => {
-    if (payload.eventType === "INSERT") {
-      const alreadyExists = currentOffers.some(
-        (offer) => offer.id === payload.new.id
-      );
+          if (belongsToMyOrders) {
+            setOrderOffers((currentOffers) => {
+              if (payload.eventType === "INSERT") {
+                const alreadyExists = currentOffers.some(
+                  (offer) => offer.id === payload.new.id,
+                );
 
-      if (alreadyExists) return currentOffers;
+                if (alreadyExists) return currentOffers;
 
-      return [payload.new, ...currentOffers];
-    }
+                return [payload.new, ...currentOffers];
+              }
 
-    if (payload.eventType === "UPDATE") {
-      return currentOffers.map((offer) =>
-        offer.id === payload.new.id
-          ? { ...offer, ...payload.new }
-          : offer
-      );
-    }
+              if (payload.eventType === "UPDATE") {
+                return currentOffers.map((offer) =>
+                  offer.id === payload.new.id
+                    ? { ...offer, ...payload.new }
+                    : offer,
+                );
+              }
 
-    if (payload.eventType === "DELETE") {
-      return currentOffers.filter(
-        (offer) => offer.id !== payload.old.id
-      );
-    }
+              if (payload.eventType === "DELETE") {
+                return currentOffers.filter(
+                  (offer) => offer.id !== payload.old.id,
+                );
+              }
 
-    return currentOffers;
-  });
-}
+              return currentOffers;
+            });
+          }
         },
       )
-.subscribe((status) => {
-  console.log("📡 REALTIME STATUS:", status);
-});
+      .subscribe((status) => {
+        console.log("📡 REALTIME STATUS:", status);
+      });
     return () => {
       supabase.removeChannel(channel);
     };
