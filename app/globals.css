@@ -405,6 +405,38 @@ header {
 .riskWarning span { color: #8A3B12; line-height: 1.65; font-size: 13px; }
 
 .bill { background: var(--mist); border-radius: 13px; padding: 15px; margin: 15px 0; }
+
+/* السعر المقترح من العميل */
+.suggestedPrice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: var(--signal-tint);
+  border: 1px solid var(--signal);
+  border-radius: 13px;
+  padding: 12px 15px;
+  margin: 15px 0;
+}
+.suggestedPriceInfo { display: flex; flex-direction: column; gap: 2px; }
+.suggestedPriceInfo span { font-size: 12px; color: var(--ink-soft); }
+.suggestedPriceInfo b { font-size: 18px; color: var(--signal-deep); }
+
+.suggestedPriceEdit,
+.suggestedPriceAccept,
+.suggestedPriceAdd {
+  border: none;
+  border-radius: 10px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--body);
+}
+.suggestedPriceEdit { background: var(--white); color: var(--signal-deep); border: 1px solid var(--signal); }
+.suggestedPriceAccept { background: var(--signal); color: var(--white); }
+.suggestedPriceAdd { background: none; color: var(--signal-deep); border: 1px dashed var(--signal); width: 100%; text-align: center; }
 .bill > div { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; color: var(--ink-soft); }
 .bill .total { margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--mist-line); font-size: 17px; color: var(--ink); font-weight: 700; }
 

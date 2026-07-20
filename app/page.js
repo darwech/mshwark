@@ -228,6 +228,11 @@ export default function Home() {
   useEffect(() => {
     let subscription;
 
+    // أقل مدة تفضل فيها شاشة التحميل المتحركة ظاهرة (بالميلي ثانية)
+    // عشان الحركة تلحق تكمل حتى لو الـ session اتأكد منه بسرعة
+    const MIN_SPLASH_MS = 1900;
+    const splashStartedAt = Date.now();
+
     async function init() {
       const {
         data: { session: currentSession },
@@ -237,6 +242,13 @@ export default function Home() {
 
       if (currentSession) {
         await loadProfile(currentSession.user);
+      }
+
+      const elapsed = Date.now() - splashStartedAt;
+      const remaining = MIN_SPLASH_MS - elapsed;
+
+      if (remaining > 0) {
+        await new Promise((resolve) => setTimeout(resolve, remaining));
       }
 
       setLoading(false);
@@ -1222,6 +1234,8 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
      البيانات الأساسية
   ========================================= */
 
+    const suggestedPrice = Number(form.get("customerOfferPrice") || 0);
+
     let payload = {
       customer_id: profile.id,
 
@@ -1233,6 +1247,9 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
       service_type: serviceType,
 
       status: "requested",
+
+      // السعر اللي العميل نفسه اقترحه للمشوار (اختياري)
+      customer_offer_price: suggestedPrice > 0 ? suggestedPrice : null,
     };
 
     /* =========================================
@@ -1429,6 +1446,49 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
     flash("تم قبول عرض المندوب بنجاح");
     refresh();
   }
+
+  async function setSuggestedPrice(orderId, currentPrice) {
+    const val = prompt(
+      "اكتب السعر اللي تقترحه للمشوار بالجنيه (سيبها فاضية عشان تشيل الاقتراح)",
+      currentPrice != null ? String(currentPrice) : "",
+    );
+
+    if (val === null) return; // ضغط إلغاء
+
+    if (val.trim() === "") {
+      const { error } = await supabase
+        .from("orders")
+        .update({ customer_offer_price: null })
+        .eq("id", orderId);
+
+      if (error) {
+        flash(error.message);
+        return;
+      }
+
+      flash("تم حذف السعر المقترح");
+      refresh();
+      return;
+    }
+
+    if (isNaN(val) || Number(val) <= 0) {
+      flash("اكتب سعر صحيح");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("orders")
+      .update({ customer_offer_price: Number(val) })
+      .eq("id", orderId);
+
+    if (error) {
+      flash(error.message);
+      return;
+    }
+
+    flash("تم تحديث السعر المقترح");
+    refresh();
+  }
   return (
     <>
       <section className="blueHero">
@@ -1514,6 +1574,7 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
               key={order.id}
               o={order}
               customer
+              setOfferPrice={setSuggestedPrice}
               currentUser={profile}
               decide={decide}
               offers={orderOffers.filter(
@@ -1689,6 +1750,16 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
               </>
             )}
 
+            <label>عايز تقترح سعر للمشوار؟ (اختياري)</label>
+
+            <input
+              name="customerOfferPrice"
+              type="number"
+              min="0"
+              step="0.5"
+              placeholder="مثلاً 40 جنيه — سيبها فاضية لو مش عارف تحدد"
+            />
+
             <label>رقم التواصل</label>
 
             <input name="phone" required defaultValue={profile.phone || ""} />
@@ -1859,10 +1930,16 @@ function Driver({ profile, orders, refresh, flash }) {
     refresh();
   }
 
-  async function sendOffer(orderId) {
-    const fee = prompt("اكتب سعر المشوار بالجنيه");
+  async function sendOffer(orderId, presetFee) {
+    // presetFee بييجي لما المندوب يضغط "قبول السعر المقترح من العميل"
+    // فنبعت السعر على طول من غير ما نفتح prompt
+    let fee = presetFee;
 
-    if (!fee) return;
+    if (fee == null) {
+      fee = prompt("اكتب سعر المشوار بالجنيه");
+
+      if (!fee) return;
+    }
 
     if (isNaN(fee) || Number(fee) <= 0) {
       flash("اكتب سعر صحيح");
@@ -2192,6 +2269,7 @@ function OrderCard({
   offers,
   drivers,
   acceptDriverOffer,
+  setOfferPrice,
   next,
   refresh,
   flash,
@@ -2595,6 +2673,51 @@ function OrderCard({
           </button>
         </div>
       )}
+      {/* السعر المقترح من العميل */}
+
+      {o.status === "requested" && !o.driver_id && (
+        <div className="suggestedPrice">
+          {o.customer_offer_price != null ? (
+            <>
+              <div className="suggestedPriceInfo">
+                <span>السعر اللي اقترحته العميل</span>
+                <b>{money(o.customer_offer_price)}</b>
+              </div>
+
+              {customer && (
+                <button
+                  type="button"
+                  className="suggestedPriceEdit"
+                  onClick={() => setOfferPrice(o.id, o.customer_offer_price)}
+                >
+                  تعديل السعر
+                </button>
+              )}
+
+              {driver && (
+                <button
+                  type="button"
+                  className="suggestedPriceAccept"
+                  onClick={() => offer(o.id, o.customer_offer_price)}
+                >
+                  قبول السعر ده وإرساله
+                </button>
+              )}
+            </>
+          ) : (
+            customer && (
+              <button
+                type="button"
+                className="suggestedPriceAdd"
+                onClick={() => setOfferPrice(o.id, null)}
+              >
+                + اقترح سعر للمشوار
+              </button>
+            )
+          )}
+        </div>
+      )}
+
       {/* عروض أسعار المندوبين */}
       {customer && o.status === "requested" && offers?.length > 0 && (
         <div className="orderOffers">
