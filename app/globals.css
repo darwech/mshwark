@@ -400,14 +400,6 @@ header {
 .trustBox b { font-size: 14px; }
 .trustBox small { color: #2F7A4C; }
 
-.assignedContact .callButton {
-  display: inline-flex; align-items: center; gap: 7px;
-  margin-top: 6px; padding: 8px 14px; width: fit-content;
-  border-radius: 10px; background: var(--good);
-  color: #fff; font-size: 13.5px; font-weight: 600;
-  text-decoration: none;
-}
-
 .riskWarning {
   display: flex; gap: 12px; margin: 14px 0; padding: 14px;
   border-radius: 13px; background: var(--signal-tint); border: 1px solid #FFCBA8;
@@ -542,6 +534,71 @@ header {
 }
 .driverInfoDetails a { color: var(--route); font-weight: 600; }
 .driverInfoDetails svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+/* ---------- 12b. CUSTOMER TRUST CHIP (قبل الإسناد) ---------- */
+.customerTrustChip {
+  display: flex; align-items: center; gap: 12px;
+  margin-top: 15px; padding: 12px 14px;
+  background: var(--white); border: 1px solid var(--mist-line); border-radius: 14px;
+}
+.customerTrustAvatar {
+  width: 42px; height: 42px; min-width: 42px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--good-tint); color: var(--good);
+  overflow: hidden;
+}
+.customerTrustAvatar img { width: 100%; height: 100%; object-fit: cover; }
+.customerTrustBody { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.customerTrustTop { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.customerTrustTop b { font-size: 14.5px; }
+.customerTrustBody small { color: var(--ink-soft); font-size: 12.5px; }
+
+.trustPill {
+  font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 100px;
+  background: var(--mist); color: var(--ink-soft); line-height: 1.6;
+}
+.trustPill-trusted { background: var(--good-tint); color: #1F7A45; }
+.trustPill-normal  { background: var(--route-tint); color: var(--route); }
+.trustPill-new     { background: var(--signal-tint); color: var(--signal-deep); }
+
+/* ---------- 12c. CUSTOMER CONTACT CARD (بعد الإسناد) ---------- */
+.customerContactCard {
+  margin: 15px 0; padding: 18px;
+  background: linear-gradient(135deg, var(--good-tint), var(--white));
+  border: 1px solid var(--good-line); border-radius: 18px;
+}
+.customerContactHeader { display: flex; align-items: center; gap: 14px; }
+.customerContactAvatar, .customerContactAvatarFallback {
+  width: 58px; height: 58px; min-width: 58px; border-radius: 50%;
+  object-fit: cover; border: 3px solid var(--white);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, .1);
+}
+.customerContactAvatarFallback {
+  display: flex; align-items: center; justify-content: center;
+  background: var(--good-tint); color: var(--good);
+}
+.customerContactHeader small { display: block; color: #2F7A4C; margin-bottom: 3px; font-weight: 600; }
+.customerContactHeader h3 { margin: 0 0 4px; font-size: 17px; }
+.customerContactRating { font-size: 13px; color: var(--ink-soft); }
+
+.customerContactCall {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 15px; padding: 13px 16px;
+  background: var(--good); color: #fff;
+  border-radius: 13px; text-decoration: none;
+  font-weight: 700; font-size: 14px;
+  box-shadow: 0 8px 18px rgba(31, 157, 85, .25);
+}
+.customerContactCall svg { flex-shrink: 0; }
+.customerContactCall span:first-of-type { flex: 1; }
+.customerContactNumber {
+  direction: ltr; font-weight: 700; letter-spacing: .3px;
+  background: rgba(255, 255, 255, .18); padding: 3px 10px; border-radius: 8px;
+}
+.customerContactCall--loading {
+  background: var(--mist); color: var(--ink-soft);
+  box-shadow: none; font-weight: 600;
+}
 
 /* ---------- 13. MODAL ---------- */
 .overlay {

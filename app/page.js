@@ -2642,23 +2642,35 @@ function OrderCard({
         </span>
       </div>
 
-      {/* معلومات العميل للمندوب */}
+      {/* معلومات العميل للمندوب - قبل الإسناد: بطاقة ثقة مختصرة بس */}
 
       {driver && customerData && !isAssignedToMe && (
-        <div className="trustBox">
-          <ShieldCheck size={26} />
+        <div className="customerTrustChip">
+          <div className="customerTrustAvatar">
+            {customerData.avatar_url ? (
+              <img src={customerData.avatar_url} alt={customerFirstName} />
+            ) : (
+              <User size={20} />
+            )}
+          </div>
 
-          <div>
-            <b>
-              {customerFirstName} — {trustText[customerData.trust_level] || "عميل جديد"}
-            </b>
+          <div className="customerTrustBody">
+            <div className="customerTrustTop">
+              <b>{customerFirstName}</b>
+
+              <span
+                className={`trustPill trustPill-${customerData.trust_level || "new"}`}
+              >
+                {trustText[customerData.trust_level] || "عميل جديد"}
+              </span>
+            </div>
 
             <small>
-              {customerData.completed_orders || 0} مكتمل
-              {" — "}
+              ⭐ {Number(customerData.rating || 5).toFixed(1)}
+              {" · "}
+              {customerData.completed_orders || 0} طلب مكتمل
+              {" · "}
               {customerData.cancelled_orders || 0} ملغي
-              {" — ⭐ "}
-              {Number(customerData.rating || 5).toFixed(1)}
             </small>
           </div>
         </div>
@@ -2667,25 +2679,45 @@ function OrderCard({
       {/* بيانات تواصل كاملة - تظهر فقط بعد ما العميل يقبل عرض المندوب ده تحديدًا */}
 
       {driver && customerData && isAssignedToMe && (
-        <div className="trustBox assignedContact">
-          <ShieldCheck size={26} />
-
-          <div>
-            <b>{contact?.full_name || customerData.full_name}</b>
-
-            <small>
-              ⭐ {Number(customerData.rating || 5).toFixed(1)}
-              {" — "}
-              {customerData.completed_orders || 0} طلب مكتمل
-            </small>
-
-            {contact?.phone && (
-              <a className="callButton" href={`tel:${contact.phone}`}>
-                <Phone size={16} />
-                {contact.phone}
-              </a>
+        <div className="customerContactCard">
+          <div className="customerContactHeader">
+            {customerData.avatar_url ? (
+              <img
+                src={customerData.avatar_url}
+                alt={contact?.full_name || customerData.full_name}
+                className="customerContactAvatar"
+              />
+            ) : (
+              <div className="customerContactAvatarFallback">
+                <User size={26} />
+              </div>
             )}
+
+            <div>
+              <small>عميلك في هذا المشوار</small>
+
+              <h3>{contact?.full_name || customerData.full_name}</h3>
+
+              <div className="customerContactRating">
+                ⭐ {Number(customerData.rating || 5).toFixed(1)}
+                {" · "}
+                {customerData.completed_orders || 0} طلب مكتمل
+              </div>
+            </div>
           </div>
+
+          {contact?.phone ? (
+            <a className="customerContactCall" href={`tel:${contact.phone}`}>
+              <Phone size={18} />
+              <span>الاتصال بالعميل</span>
+              <span className="customerContactNumber">{contact.phone}</span>
+            </a>
+          ) : (
+            <div className="customerContactCall customerContactCall--loading">
+              <Phone size={18} />
+              <span>جاري تحميل رقم التواصل...</span>
+            </div>
+          )}
         </div>
       )}
 
