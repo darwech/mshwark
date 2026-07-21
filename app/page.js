@@ -158,7 +158,6 @@ export default function Home() {
         customer:profiles!orders_customer_id_fkey(
           id,
           full_name,
-          phone,
           avatar_url,
           trust_level,
           completed_orders,
@@ -2457,6 +2456,44 @@ function OrderCard({
 
   const risky = driver && (isNewCustomer || highPurchase);
 
+  // الطلب ده مُسند فعليًا للمندوب الحالي؟ (يعني العميل قبل عرضه)
+  const isAssignedToMe = Boolean(
+    driver && o.driver_id && currentUser?.id && o.driver_id === currentUser.id,
+  );
+
+  // بيانات التواصل الكاملة (اسم + تليفون) بتتجاب بس لما الطلب يبقى مُسند
+  // للمندوب ده تحديدًا، مش ظاهرة لأي مندوب تاني بيتصفح الطلبات المتاحة
+  const [contact, setContact] = useState(null);
+
+  useEffect(() => {
+    if (!isAssignedToMe) {
+      setContact(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadContact() {
+      const { data, error } = await supabase
+        .rpc("get_order_customer_contact", { p_order_id: o.id })
+        .maybeSingle();
+
+      if (!cancelled && !error) {
+        setContact(data || null);
+      }
+    }
+
+    loadContact();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAssignedToMe, o.id]);
+
+  const customerFirstName = customerData?.full_name
+    ? customerData.full_name.split(" ")[0]
+    : "عميل";
+
   useEffect(() => {
     async function checkRating() {
       if (o.status !== "delivered" || !currentUser?.id) {
@@ -2607,12 +2644,14 @@ function OrderCard({
 
       {/* معلومات العميل للمندوب */}
 
-      {driver && customerData && (
+      {driver && customerData && !isAssignedToMe && (
         <div className="trustBox">
           <ShieldCheck size={26} />
 
           <div>
-            <b>{trustText[customerData.trust_level] || "عميل جديد"}</b>
+            <b>
+              {customerFirstName} — {trustText[customerData.trust_level] || "عميل جديد"}
+            </b>
 
             <small>
               {customerData.completed_orders || 0} مكتمل
@@ -2621,6 +2660,31 @@ function OrderCard({
               {" — ⭐ "}
               {Number(customerData.rating || 5).toFixed(1)}
             </small>
+          </div>
+        </div>
+      )}
+
+      {/* بيانات تواصل كاملة - تظهر فقط بعد ما العميل يقبل عرض المندوب ده تحديدًا */}
+
+      {driver && customerData && isAssignedToMe && (
+        <div className="trustBox assignedContact">
+          <ShieldCheck size={26} />
+
+          <div>
+            <b>{contact?.full_name || customerData.full_name}</b>
+
+            <small>
+              ⭐ {Number(customerData.rating || 5).toFixed(1)}
+              {" — "}
+              {customerData.completed_orders || 0} طلب مكتمل
+            </small>
+
+            {contact?.phone && (
+              <a className="callButton" href={`tel:${contact.phone}`}>
+                <Phone size={16} />
+                {contact.phone}
+              </a>
+            )}
           </div>
         </div>
       )}

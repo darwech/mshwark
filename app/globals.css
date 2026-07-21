@@ -400,6 +400,14 @@ header {
 .trustBox b { font-size: 14px; }
 .trustBox small { color: #2F7A4C; }
 
+.assignedContact .callButton {
+  display: inline-flex; align-items: center; gap: 7px;
+  margin-top: 6px; padding: 8px 14px; width: fit-content;
+  border-radius: 10px; background: var(--good);
+  color: #fff; font-size: 13.5px; font-weight: 600;
+  text-decoration: none;
+}
+
 .riskWarning {
   display: flex; gap: 12px; margin: 14px 0; padding: 14px;
   border-radius: 13px; background: var(--signal-tint); border: 1px solid #FFCBA8;
