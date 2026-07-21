@@ -1375,6 +1375,11 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
 
           const serviceName = serviceNames[serviceType] || "طلب";
 
+          const suggestedPriceText =
+            payload.customer_offer_price != null
+              ? ` العميل مقترح سعر ${payload.customer_offer_price} جنيه.`
+              : "";
+
           const response = await fetch("/api/push", {
             method: "POST",
             headers: {
@@ -1383,8 +1388,7 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
             },
             body: JSON.stringify({
               title: `🔔 طلب ${serviceName} جديد`,
-              message:
-                "يوجد طلب جديد متاح، افتح مشوارك لمشاهدة التفاصيل وتقديم عرضك.",
+              message: `يوجد طلب جديد متاح، افتح مشوارك لمشاهدة التفاصيل وتقديم عرضك.${suggestedPriceText}`,
               url: "/",
             }),
           });
@@ -1532,6 +1536,33 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
       flash(error.message);
       return;
     }
+
+    // إشعار المندوبين المتاحين بالسعر المقترح الجديد (من غير await،
+    // عشان العميل يشوف نتيجة التحديث فورًا)
+    (async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (session?.access_token) {
+          await fetch("/api/push", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              title: "🔔 تحديث سعر مقترح على مشوارك",
+              message: `العميل اقترح سعر ${Number(val)} جنيه على طلب متاح، افتح مشوارك لمشاهدة التفاصيل.`,
+              url: "/",
+            }),
+          });
+        }
+      } catch (pushError) {
+        console.error("PUSH PRICE UPDATE REQUEST ERROR:", pushError);
+      }
+    })();
 
     flash("تم تحديث السعر المقترح");
     refresh();
