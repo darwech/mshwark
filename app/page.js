@@ -804,6 +804,8 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 function Header({ profile, logout, openAccount }) {
+  const [pushGranted, setPushGranted] = useState(false);
+
   // تسجيل توكن إشعارات الموبايل (FCM) أول ما يوصل من النظام
   useEffect(() => {
     if (!Capacitor.isNativePlatform() || !profile?.id) return;
@@ -854,6 +856,168 @@ function Header({ profile, logout, openAccount }) {
     };
   }, [profile?.id]);
 
+  // دالة موحّدة لتفعيل/تجديد اشتراك الإشعارات، تُستخدم في حالتين:
+  // 1) لما المستخدم يدوس على الجرس بنفسه (silent=false: بتطلب الإذن وتظهر رسائل)
+  // 2) تلقائيًا أول ما يفتح التطبيق لو الإذن ممنوح بالفعل (silent=true: من غير
+  //    ما تطلب إذن جديد ومن غير ما تظهر أي Alert، عشان تشتغل في الخلفية بهدوء)
+  async function activatePush({ silent } = { silent: false }) {
+    try {
+      if (!profile?.id) {
+        if (!silent) alert("يجب تسجيل الدخول أولًا");
+        return;
+      }
+
+      // ============ داخل تطبيق الموبايل (APK) ============
+      if (Capacitor.isNativePlatform()) {
+        const currentPerm = await PushNotifications.checkPermissions();
+        let finalPerm = currentPerm.receive;
+
+        // في الوضع الصامت (silent) منطلبش إذن جديد، بس لو ممنوح بالفعل
+        // بنجدد التسجيل عشان نضمن إن التوكن محفوظ ومحدث على السيرفر
+        if (
+          !silent &&
+          (finalPerm === "prompt" || finalPerm === "prompt-with-rationale")
+        ) {
+          const requested = await PushNotifications.requestPermissions();
+          finalPerm = requested.receive;
+        }
+
+        if (finalPerm !== "granted") {
+          setPushGranted(false);
+          if (!silent) {
+            alert("لازم تسمح بالإشعارات علشان توصلك تحديثات مشوارك");
+          }
+          return;
+        }
+
+        // ده بيشغل الـ listener اللي مسجل فوق في useEffect
+        // وهو اللي بيحفظ التوكن على السيرفر أول ما يوصل
+        await PushNotifications.register();
+
+        setPushGranted(true);
+        if (!silent) alert("تم تفعيل إشعارات مشوارك بنجاح 🔔");
+        return;
+      }
+
+      // ============ على المتصفح (الموقع العادي) ============
+
+      // التأكد إن الجهاز يدعم Push Notifications
+      if (
+        !("Notification" in window) ||
+        !("serviceWorker" in navigator) ||
+        !("PushManager" in window)
+      ) {
+        if (!silent) alert("جهازك أو المتصفح لا يدعم إشعارات Push");
+        return;
+      }
+
+      // في الوضع الصامت: لو الإذن مش ممنوح أصلاً منطلبوش (منعًا لظهور
+      // نافذة الإذن من غير تفاعل مباشر من المستخدم)، وننتظر لحد ما يدوس الجرس
+      if (silent && Notification.permission !== "granted") {
+        setPushGranted(false);
+        return;
+      }
+
+      // طلب إذن الإشعارات (لو ممنوح بالفعل، الدالة دي بترجع فورًا من غير أي نافذة)
+      const permission = await Notification.requestPermission();
+
+      if (permission !== "granted") {
+        setPushGranted(false);
+        if (!silent) {
+          alert("لازم تسمح بالإشعارات علشان توصلك تحديثات مشوارك");
+        }
+        return;
+      }
+
+      // انتظار Service Worker
+      const registration = await navigator.serviceWorker.ready;
+
+      // البحث عن اشتراك موجود على نفس الجهاز
+      let subscription = await registration.pushManager.getSubscription();
+
+      // إنشاء اشتراك لو مفيش
+      if (!subscription) {
+        const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+
+        if (!publicKey) {
+          throw new Error("VAPID Public Key غير موجود");
+        }
+
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+
+          applicationServerKey: urlBase64ToUint8Array(publicKey),
+        });
+      }
+
+      const json = subscription.toJSON();
+
+      if (!subscription.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
+        throw new Error("بيانات Push Subscription غير مكتملة");
+      }
+
+      // نحصل على Session الحالية
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError || !session?.access_token) {
+        throw new Error("جلسة تسجيل الدخول غير صالحة");
+      }
+
+      // إرسال الاشتراك للسيرفر (بيحدّث نفس الـ endpoint لو موجود بالفعل،
+      // فمفيش خطورة إننا نكررها في كل مرة يفتح فيها التطبيق)
+      const response = await fetch("/api/push/subscribe", {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+
+          Authorization: `Bearer ${session.access_token}`,
+        },
+
+        body: JSON.stringify({
+          endpoint: subscription.endpoint,
+
+          p256dh: json.keys.p256dh,
+
+          auth: json.keys.auth,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error("PUSH SAVE ERROR:", result);
+
+        throw new Error(result.error || "فشل حفظ اشتراك الإشعارات");
+      }
+
+      console.log("PUSH SUBSCRIPTION SAVED:", result);
+
+      setPushGranted(true);
+      if (!silent) alert("تم تفعيل إشعارات مشوارك بنجاح 🔔");
+    } catch (error) {
+      console.error("PUSH SUBSCRIPTION ERROR:", error);
+
+      if (!silent) {
+        alert("تعذر تفعيل الإشعارات: " + (error?.message || "خطأ غير معروف"));
+      }
+    }
+  }
+
+  // تفعيل تلقائي وصامت لما التطبيق يفتح: لو المستخدم سبق ووافق على
+  // الإشعارات مرة، هيتم تجديد الاشتراك/التوكن من غير ما يحتاج يدوس
+  // على الجرس تاني كل مرة
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    activatePush({ silent: true });
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.id]);
+
   return (
     <header>
       <div className="logo">
@@ -864,144 +1028,12 @@ function Header({ profile, logout, openAccount }) {
       <div className="headActions">
         <button
           className="icon"
-          title="تفعيل الإشعارات"
-          onClick={async () => {
-            try {
-              // التأكد إن الحساب موجود
-              if (!profile?.id) {
-                alert("يجب تسجيل الدخول أولًا");
-                return;
-              }
-
-              // ============ داخل تطبيق الموبايل (APK) ============
-              if (Capacitor.isNativePlatform()) {
-                const currentPerm = await PushNotifications.checkPermissions();
-                let finalPerm = currentPerm.receive;
-
-                if (
-                  finalPerm === "prompt" ||
-                  finalPerm === "prompt-with-rationale"
-                ) {
-                  const requested =
-                    await PushNotifications.requestPermissions();
-                  finalPerm = requested.receive;
-                }
-
-                if (finalPerm !== "granted") {
-                  alert("لازم تسمح بالإشعارات علشان توصلك تحديثات مشوارك");
-                  return;
-                }
-
-                // ده بيشغل الـ listener اللي مسجل فوق في useEffect
-                // وهو اللي بيحفظ التوكن على السيرفر أول ما يوصل
-                await PushNotifications.register();
-
-                alert("تم تفعيل إشعارات مشوارك بنجاح 🔔");
-                return;
-              }
-
-              // ============ على المتصفح (الموقع العادي) ============
-
-              // التأكد إن الجهاز يدعم Push Notifications
-              if (
-                !("Notification" in window) ||
-                !("serviceWorker" in navigator) ||
-                !("PushManager" in window)
-              ) {
-                alert("جهازك أو المتصفح لا يدعم إشعارات Push");
-                return;
-              }
-
-              // طلب إذن الإشعارات
-              const permission = await Notification.requestPermission();
-
-              if (permission !== "granted") {
-                alert("لازم تسمح بالإشعارات علشان توصلك تحديثات مشوارك");
-                return;
-              }
-
-              // انتظار Service Worker
-              const registration = await navigator.serviceWorker.ready;
-
-              // البحث عن اشتراك موجود على نفس الجهاز
-              let subscription =
-                await registration.pushManager.getSubscription();
-
-              // إنشاء اشتراك لو مفيش
-              if (!subscription) {
-                const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-
-                if (!publicKey) {
-                  throw new Error("VAPID Public Key غير موجود");
-                }
-
-                subscription = await registration.pushManager.subscribe({
-                  userVisibleOnly: true,
-
-                  applicationServerKey: urlBase64ToUint8Array(publicKey),
-                });
-              }
-
-              const json = subscription.toJSON();
-
-              if (
-                !subscription.endpoint ||
-                !json.keys?.p256dh ||
-                !json.keys?.auth
-              ) {
-                throw new Error("بيانات Push Subscription غير مكتملة");
-              }
-
-              // نحصل على Session الحالية
-              const {
-                data: { session },
-                error: sessionError,
-              } = await supabase.auth.getSession();
-
-              if (sessionError || !session?.access_token) {
-                throw new Error("جلسة تسجيل الدخول غير صالحة");
-              }
-
-              // إرسال الاشتراك للسيرفر
-              const response = await fetch("/api/push/subscribe", {
-                method: "POST",
-
-                headers: {
-                  "Content-Type": "application/json",
-
-                  Authorization: `Bearer ${session.access_token}`,
-                },
-
-                body: JSON.stringify({
-                  endpoint: subscription.endpoint,
-
-                  p256dh: json.keys.p256dh,
-
-                  auth: json.keys.auth,
-                }),
-              });
-
-              const result = await response.json();
-
-              if (!response.ok) {
-                console.error("PUSH SAVE ERROR:", result);
-
-                throw new Error(result.error || "فشل حفظ اشتراك الإشعارات");
-              }
-
-              console.log("PUSH SUBSCRIPTION SAVED:", result);
-
-              alert("تم تفعيل إشعارات مشوارك بنجاح 🔔");
-            } catch (error) {
-              console.error("PUSH SUBSCRIPTION ERROR:", error);
-
-              alert(
-                "تعذر تفعيل الإشعارات: " + (error?.message || "خطأ غير معروف"),
-              );
-            }
-          }}
+          title={
+            pushGranted ? "الإشعارات مفعّلة" : "تفعيل الإشعارات"
+          }
+          onClick={() => activatePush({ silent: false })}
         >
-          🔔
+          {pushGranted ? "🔔" : "🔕"}
         </button>
         <div className="hello">أهلاً، {profile.full_name?.split(" ")[0]}</div>
 
@@ -1138,32 +1170,12 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
           console.log("🔄 عروض المندوبين اتغيرت");
           console.log("REALTIME PAYLOAD:", payload);
           console.log("EVENT TYPE:", payload.eventType);
-          console.log("USER ROLE:", profile?.role);
-          console.log(
-            "NOTIFICATION PERMISSION:",
-            "Notification" in window ? Notification.permission : "unsupported",
-          );
-          if (
-            (payload.eventType === "INSERT" ||
-              (payload.eventType === "UPDATE" &&
-                payload.new?.status !== "accepted" &&
-                Number(payload.old?.price) !== Number(payload.new?.price))) &&
-            profile?.role === "customer" &&
-            "Notification" in window &&
-            Notification.permission === "granted"
-          ) {
-            const isNewOffer = payload.eventType === "INSERT";
 
-            new Notification(
-              isNewOffer ? "🔔 عرض جديد على مشوارك" : "🔔 تم تحديث عرض السعر",
-              {
-                body: isNewOffer
-                  ? `وصلك عرض جديد بقيمة ${payload.new?.price ?? ""} جنيه`
-                  : `تم تحديث العرض إلى ${payload.new?.price ?? ""} جنيه`,
-                icon: "/icon-192.png",
-              },
-            );
-          }
+          // ملحوظة: مبنعملش هنا new Notification() محلي عشان السيرفر أصلًا
+          // بيبعت Push حقيقي (Web Push / FCM) لصاحب الطلب لحظة إرسال أو تعديل
+          // العرض (شوف /api/push/offer). لو ضفنا إشعار تاني هنا كان بيظهر
+          // إشعارين لنفس الحدث في نفس اللحظة - وده اللي كان بيسبب اللخبطة.
+          // الجزء الجاي بس بيحدّث بيانات العروض جوه الصفحة (state).
 
           const affectedOrderId =
             payload.new?.order_id || payload.old?.order_id;
@@ -1400,6 +1412,7 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
               title: `🔔 طلب ${serviceName} جديد`,
               message: `يوجد طلب جديد متاح، افتح مشوارك لمشاهدة التفاصيل وتقديم عرضك.${suggestedPriceText}`,
               url: "/",
+              serviceType,
             }),
           });
 
@@ -1593,6 +1606,8 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
         } = await supabase.auth.getSession();
 
         if (session?.access_token) {
+          const orderInfo = orders.find((order) => order.id === orderId);
+
           await fetch("/api/push", {
             method: "POST",
             headers: {
@@ -1603,6 +1618,7 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
               title: "🔔 تحديث سعر مقترح على مشوارك",
               message: `العميل اقترح سعر ${Number(val)} جنيه على طلب متاح، افتح مشوارك لمشاهدة التفاصيل.`,
               url: "/",
+              serviceType: orderInfo?.service_type || null,
             }),
           });
         }
@@ -1954,16 +1970,10 @@ function Driver({ profile, orders, refresh, flash }) {
             payload.new?.driver_id === profile.id &&
             payload.new?.status === "accepted"
           ) {
-            if (
-              "Notification" in window &&
-              Notification.permission === "granted"
-            ) {
-              new Notification("تم قبول عرضك 🎉", {
-                body: "وافق العميل على عرضك، افتح مشوارك لمشاهدة تفاصيل الطلب.",
-                icon: "/icon-192.png",
-              });
-            }
-
+            // مبنعملش new Notification() هنا: السيرفر بيبعت Push حقيقي
+            // للمندوب لحظة قبول العميل للعرض (شوف /api/push/accept-offer).
+            // الإشعار داخل الصفحة (flash) كافي هنا عشان التحديث الفوري
+            // وهو المستخدم مفتوح على التطبيق فعلاً.
             flash("🎉 تم قبول عرضك من العميل");
             refresh();
           }
@@ -1993,7 +2003,7 @@ function Driver({ profile, orders, refresh, flash }) {
 
           const newOrder = payload.new;
 
-          // المندوب غير متاح = لا نرسل إشعار
+          // المندوب غير متاح = مفيش داعي نعمل أي حاجة
           if (profile?.is_available === false) return;
 
           // نتأكد أن نوع الخدمة مناسب للمندوب
@@ -2012,24 +2022,10 @@ function Driver({ profile, orders, refresh, flash }) {
           if (newOrder?.service_type === "ride" && profile?.can_ride === false)
             return;
 
-          if (
-            "Notification" in window &&
-            Notification.permission === "granted"
-          ) {
-            const serviceNames = {
-              purchase: "شراء",
-              delivery: "توصيل",
-              ride: "مشوار",
-            };
-
-            const serviceName = serviceNames[newOrder?.service_type] || "خدمة";
-
-            new Notification(`🔔 طلب ${serviceName} جديد`, {
-              body: "يوجد طلب جديد متاح، افتح مشوارك لمشاهدة التفاصيل وتقديم عرضك.",
-              icon: "/icon-192.png",
-            });
-          }
-
+          // مبنعملش new Notification() هنا: السيرفر أصلًا بيبعت Push حقيقي
+          // للمندوبين المتاحين واللي بيقدروا يخدموا نوع الطلب ده لحظة إنشاء
+          // الطلب (شوف /api/push، فلترة serviceType). ده بيمنع ظهور إشعارين
+          // لنفس الطلب الجديد.
           refresh();
         },
       )
