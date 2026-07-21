@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { Keyboard } from "@capacitor/keyboard";
 import { Capacitor } from "@capacitor/core";
@@ -1026,6 +1026,16 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
 
   const [serviceType, setServiceType] = useState(null);
   const [orderOffers, setOrderOffers] = useState([]);
+
+  // نحتفظ بآخر نسخة من orders في ref عشان قناة الإشعارات (order-offers-realtime)
+  // متعملش unsubscribe/subscribe من جديد في كل مرة orders بتتغيّر (ده كان بيوقف
+  // الإشعارات فجأة أحيانًا بسبب تصادم في اشتراكات Supabase Realtime)
+  const ordersRef = useRef(orders);
+
+  useEffect(() => {
+    ordersRef.current = orders;
+  }, [orders]);
+
   useEffect(() => {
     if (!show) return;
 
@@ -1158,7 +1168,7 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
           const affectedOrderId =
             payload.new?.order_id || payload.old?.order_id;
 
-          const belongsToMyOrders = orders.some(
+          const belongsToMyOrders = ordersRef.current.some(
             (order) => order.id === affectedOrderId,
           );
 
@@ -1199,7 +1209,7 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [profile?.id, orders]);
+  }, [profile?.id]);
 
   const [showAllOrders, setShowAllOrders] = useState(false);
 
@@ -1455,6 +1465,43 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
 
     refresh();
   }
+  async function cancelOrder(id, reason) {
+    const { error } = await supabase.rpc("cancel_order", {
+      p_order_id: id,
+      p_reason: reason || null,
+    });
+
+    if (error) {
+      flash(error.message);
+      return;
+    }
+
+    // إشعار المندوب (لو معين على الطلب) بإلغاء العميل (من غير await)
+    (async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (session?.access_token) {
+          await fetch("/api/push/cancel-order", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ orderId: id, reason }),
+          });
+        }
+      } catch (pushError) {
+        console.error("PUSH CANCEL ORDER REQUEST ERROR:", pushError);
+      }
+    })();
+
+    flash("تم إلغاء الطلب");
+
+    refresh();
+  }
   async function acceptDriverOffer(item) {
     if (!item?.id) {
       flash("بيانات العرض غير مكتملة");
@@ -1660,6 +1707,7 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
               )}
               drivers={drivers}
               acceptDriverOffer={acceptDriverOffer}
+              cancelOrder={cancelOrder}
               refresh={refresh}
               flash={flash}
             />
@@ -2098,6 +2146,44 @@ function Driver({ profile, orders, refresh, flash }) {
     refresh();
   }
 
+  async function cancelOrder(id, reason) {
+    const { error } = await supabase.rpc("cancel_order", {
+      p_order_id: id,
+      p_reason: reason || null,
+    });
+
+    if (error) {
+      flash(error.message);
+      return;
+    }
+
+    // إشعار العميل بإلغاء المندوب (من غير await)
+    (async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (session?.access_token) {
+          await fetch("/api/push/cancel-order", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ orderId: id, reason }),
+          });
+        }
+      } catch (pushError) {
+        console.error("PUSH CANCEL ORDER REQUEST ERROR:", pushError);
+      }
+    })();
+
+    flash("تم إلغاء الطلب");
+
+    refresh();
+  }
+
   async function nextStatus(orderId, currentStatus, serviceType) {
     let newStatus = null;
 
@@ -2302,6 +2388,7 @@ function Driver({ profile, orders, refresh, flash }) {
               currentUser={profile}
               offer={sendOffer}
               next={nextStatus}
+              cancelOrder={cancelOrder}
               refresh={refresh}
               flash={flash}
             />
@@ -2349,6 +2436,7 @@ function OrderCard({
   acceptDriverOffer,
   setOfferPrice,
   next,
+  cancelOrder,
   refresh,
   flash,
 }) {
@@ -2876,6 +2964,41 @@ function OrderCard({
             {actionText()}
           </button>
         )}
+
+      {/* إلغاء الطلب */}
+
+      {!["delivered", "cancelled"].includes(o.status) && (
+        <div className="actions">
+          <button
+            type="button"
+            className="reject"
+            onClick={async () => {
+              const confirmed = window.confirm(
+                "متأكد إنك عايز تلغي الطلب ده؟",
+              );
+
+              if (!confirmed) return;
+
+              const reason = window.prompt(
+                "سبب الإلغاء (اختياري)",
+                "",
+              );
+
+              await cancelOrder(o.id, reason || null);
+            }}
+          >
+            <XCircle />
+            إلغاء الطلب
+          </button>
+        </div>
+      )}
+
+      {o.cancelled_at && o.status === "cancelled" && (
+        <div className="ratedMessage">
+          <XCircle />
+          {o.cancel_reason ? `تم إلغاء الطلب - ${o.cancel_reason}` : "تم إلغاء هذا الطلب"}
+        </div>
+      )}
 
       {/* التقييم */}
 
