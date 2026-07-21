@@ -41,14 +41,25 @@ export async function POST(request) {
       title = "مشوارك 🔔",
       message = "يوجد طلب جديد متاح",
       url = "/",
+      serviceType = null,
     } = body;
 
-    // 4) جلب المندوبين المتاحين
-    const { data: drivers, error: driversError } = await supabaseAdmin
+    // 4) جلب المندوبين المتاحين واللي بيقدروا يخدموا نوع الطلب ده
+    let driversQuery = supabaseAdmin
       .from("profiles")
       .select("id")
       .eq("role", "driver")
       .eq("is_available", true);
+
+    if (serviceType === "purchase") {
+      driversQuery = driversQuery.not("can_purchase", "is", false);
+    } else if (serviceType === "delivery") {
+      driversQuery = driversQuery.not("can_delivery", "is", false);
+    } else if (serviceType === "ride") {
+      driversQuery = driversQuery.not("can_ride", "is", false);
+    }
+
+    const { data: drivers, error: driversError } = await driversQuery;
 
     if (driversError) {
       console.error("DRIVERS ERROR:", driversError);
