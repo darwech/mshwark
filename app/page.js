@@ -229,8 +229,9 @@ export default function Home() {
     let subscription;
 
     // أقل مدة تفضل فيها شاشة التحميل المتحركة ظاهرة (بالميلي ثانية)
-    // عشان الحركة تلحق تكمل حتى لو الـ session اتأكد منه بسرعة
-    const MIN_SPLASH_MS = 1900;
+    // بتغطي: رسم الشعار + ظهور الاسم حرف بحرف بالكامل + لحظة استقرار
+    // قبل ما تختفي، حتى لو الـ session اتأكد منه بسرعة جدًا
+    const MIN_SPLASH_MS = 2700;
     const splashStartedAt = Date.now();
 
     async function init() {

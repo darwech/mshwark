@@ -102,7 +102,12 @@ small { color: var(--ink-soft); }
 }
 
 /* ---------- 3. SHELL + HEADER ---------- */
-.shell, .admin { min-height: 100vh; }
+.shell, .admin { min-height: 100vh; animation: shellFadeIn 0.45s ease-out; }
+
+@keyframes shellFadeIn {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
+}
 
 header {
   height: 68px;
@@ -821,12 +826,34 @@ body.keyboard-open .modal { margin-top: 6px; }
   color: var(--white);
   letter-spacing: 0.5px;
   opacity: 0;
-  animation: asplashRise 0.6s 1.35s ease forwards;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  animation: asplashNameIn 0.4s 0.9s ease forwards;
+}
+
+@keyframes asplashNameIn {
+  to { opacity: 1; }
 }
 
 @keyframes asplashRise {
   0%   { opacity: 0; transform: translateY(14px); }
   100% { opacity: 1; transform: translateY(0); }
+}
+
+.asplash-caret {
+  display: inline-block;
+  width: 3px;
+  height: 26px;
+  margin-inline-start: 3px;
+  background: var(--signal);
+  border-radius: 2px;
+  animation: asplashCaret 0.8s steps(1) infinite;
+}
+
+@keyframes asplashCaret {
+  0%, 49%   { opacity: 1; }
+  50%, 100% { opacity: 0; }
 }
 
 .asplash-loader {
@@ -835,7 +862,7 @@ body.keyboard-open .modal { margin-top: 6px; }
   display: flex;
   gap: 7px;
   opacity: 0;
-  animation: asplashRise 0.5s 1.6s ease forwards;
+  animation: asplashRise 0.5s 2.25s ease forwards;
 }
 .asplash-loader span {
   width: 7px;
@@ -857,12 +884,13 @@ body.keyboard-open .modal { margin-top: 6px; }
   font-size: 13px;
   color: rgba(255, 255, 255, 0.65);
   opacity: 0;
-  animation: asplashRise 0.5s 1.7s ease forwards;
+  animation: asplashRise 0.5s 2.35s ease forwards;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .asplash-ring, .asplash-path, .asplash-dot, .asplash-pulse,
-  .asplash-name, .asplash-loader, .asplash-message, .asplash-logo {
+  .asplash-name, .asplash-loader, .asplash-message, .asplash-logo,
+  .asplash-caret {
     animation: none !important;
     opacity: 1 !important;
     stroke-dashoffset: 0 !important;

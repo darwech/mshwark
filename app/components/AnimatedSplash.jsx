@@ -1,10 +1,40 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
+const FULL_NAME = "مشوارك";
+const REVEAL_STEP_MS = 190; // الوقت بين ظهور كل حرف والتاني
+const REVEAL_START_DELAY_MS = 950; // يبدأ بعد ما شعار الـ M يخلص رسمه
+
 /**
  * شاشة تحميل متحركة بهوية "مشوارك" — تستخدم بدل نص التحميل الثابت
  * في أي مكان في التطبيق فيه انتظار (تسجيل الدخول، تجهيز الحساب... إلخ)
  */
 export default function AnimatedSplash({ message = "جاري تحميل مشوارك..." }) {
+  const [visibleChars, setVisibleChars] = useState(0);
+
+  useEffect(() => {
+    let interval;
+    const startTimer = setTimeout(() => {
+      let count = 1;
+      setVisibleChars(count);
+
+      interval = setInterval(() => {
+        count += 1;
+        setVisibleChars(count);
+
+        if (count >= FULL_NAME.length) {
+          clearInterval(interval);
+        }
+      }, REVEAL_STEP_MS);
+    }, REVEAL_START_DELAY_MS);
+
+    return () => {
+      clearTimeout(startTimer);
+      if (interval) clearInterval(interval);
+    };
+  }, []);
+
   return (
     <div className="asplash">
       <div className="asplash-ring asplash-ring--1" />
@@ -33,7 +63,10 @@ export default function AnimatedSplash({ message = "جاري تحميل مشوا
         </svg>
       </div>
 
-      <div className="asplash-name">مشوارك</div>
+      <div className="asplash-name" aria-label={FULL_NAME}>
+        {FULL_NAME.slice(0, visibleChars)}
+        <span className="asplash-caret" aria-hidden="true" />
+      </div>
 
       <div className="asplash-loader" aria-hidden="true">
         <span />
