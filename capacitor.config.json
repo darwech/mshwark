@@ -11,7 +11,7 @@
       "presentationOptions": ["badge", "sound", "alert"]
     },
     "SplashScreen": {
-      "launchShowDuration": 2500,
+      "launchShowDuration": 0,
       "launchAutoHide": true,
       "backgroundColor": "#0B2050",
       "androidScaleType": "CENTER_CROP",

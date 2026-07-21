@@ -17,7 +17,8 @@
 
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <!-- خلفية اللحظة الأولى: نفس لون هوية التطبيق بالظبط، بدون أي أيقونة -->
+        <!-- خلفية اللحظة الأولى: صورة العلامة التجارية نفسها (نفس تصميم شاشة الفتح)
+             بدون أي أيقونة منفصلة فوقها -->
         <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
 
         <!-- أيقونة شفافة تمامًا عشان نظام أندرويد ما يعرضش حرف الـ M الافتراضي -->
@@ -29,6 +30,9 @@
              عشان شاشة التحميل المتحركة بتاعتنا (AnimatedSplash) تظهر على طول -->
         <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
 
-        <item name="android:background">@color/ic_launcher_background</item>
+        <!-- ده اللي بيظهر فعليًا كخلفية طول مدة الـ splash الأصلي بتاع Capacitor
+             (اللي بيتحكم فيه launchShowDuration) — صورة العلامة التجارية كاملة -->
+        <item name="android:background">@drawable/splash</item>
+        <item name="android:windowBackground">@drawable/splash</item>
     </style>
 </resources>
