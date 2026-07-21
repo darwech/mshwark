@@ -1424,6 +1424,29 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
       return;
     }
 
+    // إشعار المندوب بقرار العميل (من غير await، عشان العميل
+    // يشوف نتيجة القرار فورًا من غير ما ينتظر إرسال الإشعار)
+    (async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (session?.access_token) {
+          await fetch("/api/push/decide", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ orderId: id, accepted }),
+          });
+        }
+      } catch (pushError) {
+        console.error("PUSH DECIDE REQUEST ERROR:", pushError);
+      }
+    })();
+
     flash(accepted ? "تم قبول السعر" : "تم رفض العرض");
 
     refresh();
@@ -1443,6 +1466,29 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
       flash(error.message);
       return;
     }
+
+    // إشعار المندوب صاحب العرض المقبول (من غير await، عشان العميل
+    // يشوف نتيجة القبول فورًا من غير ما ينتظر إرسال الإشعار)
+    (async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (session?.access_token) {
+          await fetch("/api/push/accept-offer", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ offerId: item.id }),
+          });
+        }
+      } catch (pushError) {
+        console.error("PUSH ACCEPT OFFER REQUEST ERROR:", pushError);
+      }
+    })();
 
     flash("تم قبول عرض المندوب بنجاح");
     refresh();
