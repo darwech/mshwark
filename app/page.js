@@ -2619,11 +2619,12 @@ function OrderCard({
   }
 
   return (
-    <article className="order">
+    <article className={`order order--${o.service_type}`}>
       <div className="orderTop">
         <div>
           <small>
-            {service.emoji} {service.title}
+            <span className="orderTypeBadge">{service.emoji}</span>
+            {service.title}
             {" — "}
             مشوار #{String(o.id).slice(0, 8)}
           </small>

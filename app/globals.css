@@ -22,9 +22,10 @@
   --signal-deep: #E85513;
   --signal-tint: #FFE9DD;
 
-  --good:        #1F9D55;
-  --good-tint:   #E6F6EC;
-  --good-line:   #BEE7CC;
+  --good:        #5C8D71;
+  --good-deep:   #3D6B52;
+  --good-tint:   #EBF2ED;
+  --good-line:   #D2E2D8;
 
   --bad:         #D6304A;
   --bad-tint:    #FCE8EA;
@@ -253,7 +254,7 @@ header {
 .accept { background: var(--good); color: white; }
 .reject { background: var(--bad-tint); color: var(--bad); }
 
-.online { background: var(--good-tint); color: #146A38; margin-top: 15px; }
+.online { background: var(--good-tint); color: var(--good-deep); margin-top: 15px; }
 .offline { background: var(--white); color: var(--ink); border: 1px solid var(--mist-line); margin-top: 15px; }
 
 .actions { display: flex; gap: 9px; flex-wrap: wrap; }
@@ -323,7 +324,7 @@ header {
 .rideCard::after {
   content: "جديد"; position: absolute; top: 14px; left: 14px;
   padding: 5px 10px; border-radius: 30px;
-  background: var(--good-tint); color: #146A38;
+  background: var(--good-tint); color: var(--good-deep);
   font-size: 11px; font-weight: 800;
 }
 
@@ -354,9 +355,9 @@ header {
 
 /* ---------- 10. ORDER CARD ---------- */
 .order {
-  position: relative;
+  position: relative; overflow: hidden;
   background: var(--white); border: 1px solid var(--mist-line);
-  border-radius: 20px; padding: 22px; margin-bottom: 15px;
+  border-radius: 20px; padding: 22px; padding-inline-start: 25px; margin-bottom: 15px;
   box-shadow: var(--shadow-card);
   transition: transform .2s ease, box-shadow .2s ease;
   animation: orderEnter .4s ease-out both;
@@ -364,22 +365,52 @@ header {
 @keyframes orderEnter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 .order:hover { transform: translateY(-2px); box-shadow: var(--shadow-pop); }
 
+/* شريط جانبي يميّز نوع الخدمة بلمحة واحدة */
+.order::before {
+  content: ""; position: absolute; inset-inline-start: 0; top: 0; bottom: 0; width: 4px;
+  background: var(--mist-line);
+}
+.order--purchase::before { background: linear-gradient(180deg, var(--signal), var(--signal-deep)); }
+.order--delivery::before { background: linear-gradient(180deg, var(--route), var(--route-deep)); }
+.order--ride::before     { background: linear-gradient(180deg, var(--purple), #4A3AA8); }
+
 .orderTop {
   display: flex; justify-content: space-between; align-items: flex-start; gap: 14px;
   border-bottom: 1px solid var(--mist); padding-bottom: 14px; margin-bottom: 14px;
 }
-.orderTop small { color: var(--ink-soft); font-size: 12.5px; }
-.orderTop h3 { margin: 6px 0 0; font-size: 18px; }
+.orderTop small {
+  display: inline-flex; align-items: center;
+  color: var(--ink-soft); font-size: 12.5px; font-weight: 600;
+}
+.orderTop h3 { margin: 7px 0 0; font-size: 18px; font-family: var(--display); }
+
+.orderTypeBadge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; margin-inline-end: 7px; border-radius: 50%;
+  background: var(--mist); font-size: 12px;
+}
+.order--purchase .orderTypeBadge { background: var(--signal-tint); }
+.order--delivery .orderTypeBadge { background: var(--route-tint); }
+.order--ride .orderTypeBadge     { background: var(--purple-tint); }
+.order--purchase .orderTop > div > small { color: var(--signal-deep); }
+.order--delivery .orderTop > div > small { color: var(--route); }
+.order--ride .orderTop > div > small     { color: var(--purple); }
 
 .status {
-  display: inline-flex; padding: 7px 12px; border-radius: 999px;
+  position: relative; display: inline-flex; align-items: center;
+  padding: 7px 12px; padding-inline-start: 22px; border-radius: 999px;
   font-size: 12px; font-weight: 700; white-space: nowrap;
   background: var(--mist); color: var(--ink-soft);
+}
+.status::before {
+  content: ""; position: absolute; inset-inline-start: 11px; top: 50%;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor; transform: translateY(-50%);
 }
 .status.requested, .status.offer_sent { background: #FFF0E4; color: #9A4A0F; }
 .status.offer_accepted, .status.shopping, .status.purchased, .status.delivering,
 .status.driver_on_way { background: var(--route-tint); color: var(--route); }
-.status.delivered { background: var(--good-tint); color: #146A38; }
+.status.delivered { background: var(--good-tint); color: var(--good-deep); }
 .status.offer_rejected, .status.cancelled { background: var(--bad-tint); color: var(--bad); }
 .status.driver_arrived { background: var(--purple-tint); color: var(--purple); }
 .status.ride_started { background: var(--signal-tint); color: var(--signal-deep); }
@@ -392,24 +423,33 @@ header {
 
 .trustBox {
   display: flex; align-items: center; gap: 12px;
-  margin-top: 15px; padding: 13px 15px; border-radius: 13px;
+  margin-top: 15px; padding: 12px 15px; border-radius: var(--radius-md);
   background: var(--good-tint); border: 1px solid var(--good-line);
 }
-.trustBox svg { color: var(--good); flex-shrink: 0; }
+.trustBox svg {
+  flex-shrink: 0; width: 34px; height: 34px; padding: 8px; box-sizing: border-box;
+  border-radius: 50%; background: rgba(92, 141, 113, .14); color: var(--good-deep);
+}
 .trustBox div { display: flex; flex-direction: column; gap: 3px; }
 .trustBox b { font-size: 14px; }
-.trustBox small { color: #2F7A4C; }
+.trustBox small { color: var(--good-deep); }
 
 .riskWarning {
   display: flex; gap: 12px; margin: 14px 0; padding: 14px;
-  border-radius: 13px; background: var(--signal-tint); border: 1px solid #FFCBA8;
+  border-radius: var(--radius-md); background: var(--signal-tint); border: 1px solid #FFCBA8;
 }
-.riskWarning svg { color: var(--signal-deep); flex-shrink: 0; }
+.riskWarning svg {
+  flex-shrink: 0; width: 34px; height: 34px; padding: 8px; box-sizing: border-box;
+  border-radius: 50%; background: rgba(255, 106, 43, .14); color: var(--signal-deep);
+}
 .riskWarning div { display: flex; flex-direction: column; gap: 5px; }
 .riskWarning b { font-size: 14px; color: #8A3B12; }
 .riskWarning span { color: #8A3B12; line-height: 1.65; font-size: 13px; }
 
-.bill { background: var(--mist); border-radius: 13px; padding: 15px; margin: 15px 0; }
+.bill {
+  background: var(--white); border: 1px solid var(--mist-line);
+  border-radius: var(--radius-md); padding: 15px 17px; margin: 15px 0;
+}
 
 /* السعر المقترح من العميل */
 .suggestedPrice {
@@ -442,15 +482,22 @@ header {
 .suggestedPriceEdit { background: var(--white); color: var(--signal-deep); border: 1px solid var(--signal); }
 .suggestedPriceAccept { background: var(--signal); color: var(--white); }
 .suggestedPriceAdd { background: none; color: var(--signal-deep); border: 1px dashed var(--signal); width: 100%; text-align: center; }
-.bill > div { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; color: var(--ink-soft); }
-.bill .total { margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--mist-line); font-size: 17px; color: var(--ink); font-weight: 700; }
+.bill > div { display: flex; justify-content: space-between; padding: 6px 2px; font-size: 14px; color: var(--ink-soft); }
+.bill .total {
+  margin-top: 8px; padding: 12px 14px; border-top: none;
+  background: var(--mist); border-radius: 10px;
+  font-size: 17px; color: var(--ink); font-weight: 700;
+}
 
 .rideNotice {
   display: flex; align-items: center; gap: 13px;
-  padding: 15px; margin-bottom: 10px; border-radius: 14px;
+  padding: 15px; margin-bottom: 10px; border-radius: var(--radius-md);
   background: var(--route-tint); border: 1px solid #C9D8F5;
 }
-.rideNotice svg { flex-shrink: 0; color: var(--route); }
+.rideNotice svg {
+  flex-shrink: 0; width: 34px; height: 34px; padding: 8px; box-sizing: border-box;
+  border-radius: 50%; background: rgba(20, 48, 107, .1); color: var(--route);
+}
 .rideNotice div { display: flex; flex-direction: column; gap: 4px; }
 .rideNotice span { color: var(--ink-soft); font-size: 13px; }
 
@@ -475,7 +522,7 @@ header {
 .ratedMessage {
   margin-top: 16px; padding: 12px 15px; border-radius: 12px;
   background: var(--good-tint); border: 1px solid var(--good-line);
-  color: #146A38; font-weight: 700; display: flex; align-items: center; gap: 8px;
+  color: var(--good-deep); font-weight: 700; display: flex; align-items: center; gap: 8px;
 }
 
 /* ---------- 11. OFFERS ---------- */
@@ -597,7 +644,7 @@ header {
   font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 100px;
   background: var(--mist); color: var(--ink-soft); line-height: 1.6;
 }
-.trustPill-trusted { background: var(--good-tint); color: #1F7A45; }
+.trustPill-trusted { background: var(--good-tint); color: var(--good-deep); }
 .trustPill-normal  { background: var(--route-tint); color: var(--route); }
 .trustPill-new     { background: var(--signal-tint); color: var(--signal-deep); }
 
@@ -611,14 +658,14 @@ header {
 }
 .customerContactCard::before {
   content: ""; position: absolute; inset-inline-start: 0; top: 0; bottom: 0; width: 4px;
-  background: linear-gradient(180deg, var(--good), #158A47);
+  background: linear-gradient(180deg, var(--good), var(--good-deep));
 }
 .customerContactHeader { display: flex; align-items: center; gap: 14px; }
 .customerContactAvatar, .customerContactAvatarFallback {
   width: 60px; height: 60px; min-width: 60px; border-radius: 50%;
   object-fit: cover; padding: 2px;
-  background: linear-gradient(135deg, var(--good), #16B26A);
-  box-shadow: 0 4px 14px rgba(31, 157, 85, .25);
+  background: linear-gradient(135deg, var(--good), var(--good-deep));
+  box-shadow: 0 4px 14px rgba(92, 141, 113, .25);
 }
 .customerContactAvatar { border: 3px solid var(--white); background-clip: padding-box; }
 .customerContactAvatarFallback {
@@ -627,7 +674,7 @@ header {
 }
 .customerContactHeader small {
   display: inline-flex; align-items: center; gap: 5px;
-  color: #1F7A45; margin-bottom: 5px; font-weight: 700; font-size: 12px;
+  color: var(--good-deep); margin-bottom: 5px; font-weight: 700; font-size: 12px;
   letter-spacing: .2px;
 }
 .customerContactHeader small::before {
@@ -637,7 +684,7 @@ header {
 .customerContactHeader h3 { margin: 0 0 5px; font-size: 17.5px; font-family: var(--display); }
 .customerContactRating {
   display: inline-flex; align-items: center; font-size: 12.5px; font-weight: 700;
-  color: #1F7A45; background: rgba(31, 157, 85, .1); padding: 3px 10px; border-radius: 100px;
+  color: var(--good-deep); background: rgba(92, 141, 113, .1); padding: 3px 10px; border-radius: 100px;
 }
 
 .customerContactCall {
@@ -646,10 +693,10 @@ header {
   background: var(--good); color: #fff;
   border-radius: 14px; text-decoration: none;
   font-weight: 700; font-size: 14px;
-  box-shadow: 0 8px 18px rgba(31, 157, 85, .28);
+  box-shadow: 0 8px 18px rgba(92, 141, 113, .28);
   transition: box-shadow .2s ease, transform .2s ease;
 }
-.customerContactCall:hover { box-shadow: 0 10px 22px rgba(31, 157, 85, .35); transform: translateY(-1px); }
+.customerContactCall:hover { box-shadow: 0 10px 22px rgba(92, 141, 113, .35); transform: translateY(-1px); }
 .customerContactCall svg {
   flex-shrink: 0; width: 34px; height: 34px; padding: 8px; box-sizing: border-box;
   background: rgba(255, 255, 255, .18); border-radius: 50%;
@@ -762,7 +809,7 @@ body.keyboard-open .modal { margin-top: 6px; }
 .servicePermissions span { font-weight: 700; }
 .servicePermissions b { font-size: 12px; }
 
-.permissionActive { border: 1px solid var(--good-line); background: var(--good-tint); color: #146A38; }
+.permissionActive { border: 1px solid var(--good-line); background: var(--good-tint); color: var(--good-deep); }
 .permissionOff { border: 1px solid var(--mist-line); background: var(--mist); color: var(--ink-soft); }
 .permissionActive:hover, .permissionOff:hover { transform: translateY(-2px); }
 
