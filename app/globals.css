@@ -511,44 +511,84 @@ header {
 }
 .offerAcceptButton:hover { box-shadow: 0 10px 22px rgba(255, 106, 43, .3); }
 
-/* ---------- 12. DRIVER INFO CARD ---------- */
+/* ---------- 12. DRIVER INFO CARD (يظهر للعميل) ---------- */
 .driverInfoCard {
-  margin: 18px 0; padding: 18px;
-  background: linear-gradient(135deg, #FAFBFF, var(--white));
-  border: 1px solid var(--mist-line); border-radius: 18px;
+  position: relative; overflow: hidden;
+  margin: 18px 0; padding: 20px;
+  background:
+    radial-gradient(120px 90px at 100% 0%, var(--route-tint) 0%, transparent 70%),
+    linear-gradient(135deg, #FAFBFF, var(--white));
+  border: 1px solid var(--mist-line); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  transition: box-shadow .25s ease, transform .25s ease;
 }
+.driverInfoCard:hover { box-shadow: var(--shadow-pop); transform: translateY(-1px); }
+.driverInfoCard::before {
+  content: ""; position: absolute; inset-inline-start: 0; top: 0; bottom: 0; width: 4px;
+  background: linear-gradient(180deg, var(--route), var(--route-deep));
+}
+
 .driverInfoHeader { display: flex; align-items: center; gap: 14px; }
 .driverAvatar, .driverAvatarFallback {
-  width: 60px; height: 60px; min-width: 60px; border-radius: 50%;
-  object-fit: cover; border: 3px solid var(--white);
-  box-shadow: 0 3px 12px rgba(0, 0, 0, .12);
+  width: 62px; height: 62px; min-width: 62px; border-radius: 50%;
+  object-fit: cover; padding: 2px;
+  background: linear-gradient(135deg, var(--route), var(--signal));
+  box-shadow: 0 4px 14px rgba(20, 48, 107, .2);
 }
-.driverAvatarFallback { display: flex; align-items: center; justify-content: center; background: var(--route-tint); font-size: 26px; }
-.driverInfoHeader small { display: block; color: var(--ink-soft); margin-bottom: 4px; }
-.driverInfoHeader h3 { margin: 0 0 4px; font-size: 18px; }
+.driverAvatar { border: 3px solid var(--white); background-clip: padding-box; }
+.driverAvatarFallback {
+  display: flex; align-items: center; justify-content: center;
+  color: var(--route); font-size: 24px;
+}
+.driverInfoHeader small {
+  display: block; color: var(--route); font-weight: 700; letter-spacing: .2px;
+  margin-bottom: 4px;
+}
+.driverInfoHeader h3 { margin: 0 0 6px; font-size: 18.5px; font-family: var(--display); }
+.driverInfoHeader > div:last-child > div {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12.5px; font-weight: 700; color: var(--signal-deep);
+  background: var(--signal-tint); padding: 3px 10px; border-radius: 100px;
+}
 
-.driverInfoDetails { display: grid; gap: 9px; margin-top: 15px; padding-top: 14px; border-top: 1px solid var(--mist); }
+.driverInfoDetails { display: grid; gap: 8px; margin-top: 16px; padding-top: 15px; border-top: 1px dashed var(--mist-line); }
 .driverInfoDetails a, .driverInfoDetails > div {
-  display: flex; align-items: center; gap: 9px; padding: 10px 12px;
-  background: var(--mist); border-radius: 10px; color: var(--ink); text-decoration: none;
+  display: flex; align-items: center; gap: 11px; padding: 10px 12px;
+  background: var(--white); border: 1px solid var(--mist-line);
+  border-radius: 12px; color: var(--ink); text-decoration: none;
+  transition: background .2s ease, border-color .2s ease;
 }
-.driverInfoDetails a { color: var(--route); font-weight: 600; }
-.driverInfoDetails svg { width: 18px; height: 18px; flex-shrink: 0; }
+.driverInfoDetails a:hover { background: var(--route-tint); border-color: var(--route-tint); }
+.driverInfoDetails a { color: var(--route-deep); font-weight: 700; }
+.driverInfoDetails svg {
+  width: 32px; height: 32px; flex-shrink: 0; padding: 7px; box-sizing: border-box;
+  border-radius: 50%; background: var(--route-tint); color: var(--route);
+}
 
-/* ---------- 12b. CUSTOMER TRUST CHIP (قبل الإسناد) ---------- */
+/* ---------- 12b. CUSTOMER TRUST CHIP (قبل الإسناد — يظهر للمندوب) ---------- */
 .customerTrustChip {
-  display: flex; align-items: center; gap: 12px;
-  margin-top: 15px; padding: 12px 14px;
+  position: relative; display: flex; align-items: center; gap: 12px;
+  margin-top: 15px; padding: 12px 14px 12px 16px;
   background: var(--white); border: 1px solid var(--mist-line); border-radius: 14px;
+  overflow: hidden;
 }
+.customerTrustChip::before {
+  content: ""; position: absolute; inset-inline-start: 0; top: 0; bottom: 0; width: 3.5px;
+  background: var(--good);
+}
+.customerTrustChip:has(.trustPill-new)::before    { background: var(--signal); }
+.customerTrustChip:has(.trustPill-normal)::before { background: var(--route); }
+.customerTrustChip:has(.trustPill-trusted)::before{ background: var(--good); }
+
 .customerTrustAvatar {
-  width: 42px; height: 42px; min-width: 42px; border-radius: 50%;
+  width: 44px; height: 44px; min-width: 44px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   background: var(--good-tint); color: var(--good);
+  border: 2px solid var(--white); box-shadow: 0 2px 8px rgba(16, 25, 43, .1);
   overflow: hidden;
 }
 .customerTrustAvatar img { width: 100%; height: 100%; object-fit: cover; }
-.customerTrustBody { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.customerTrustBody { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .customerTrustTop { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .customerTrustTop b { font-size: 14.5px; }
 .customerTrustBody small { color: var(--ink-soft); font-size: 12.5px; }
@@ -561,44 +601,69 @@ header {
 .trustPill-normal  { background: var(--route-tint); color: var(--route); }
 .trustPill-new     { background: var(--signal-tint); color: var(--signal-deep); }
 
-/* ---------- 12c. CUSTOMER CONTACT CARD (بعد الإسناد) ---------- */
+/* ---------- 12c. CUSTOMER CONTACT CARD (بعد الإسناد — يظهر للمندوب) ---------- */
 .customerContactCard {
-  margin: 15px 0; padding: 18px;
+  position: relative; overflow: hidden;
+  margin: 15px 0; padding: 20px;
   background: linear-gradient(135deg, var(--good-tint), var(--white));
-  border: 1px solid var(--good-line); border-radius: 18px;
+  border: 1px solid var(--good-line); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+.customerContactCard::before {
+  content: ""; position: absolute; inset-inline-start: 0; top: 0; bottom: 0; width: 4px;
+  background: linear-gradient(180deg, var(--good), #158A47);
 }
 .customerContactHeader { display: flex; align-items: center; gap: 14px; }
 .customerContactAvatar, .customerContactAvatarFallback {
-  width: 58px; height: 58px; min-width: 58px; border-radius: 50%;
-  object-fit: cover; border: 3px solid var(--white);
-  box-shadow: 0 3px 12px rgba(0, 0, 0, .1);
+  width: 60px; height: 60px; min-width: 60px; border-radius: 50%;
+  object-fit: cover; padding: 2px;
+  background: linear-gradient(135deg, var(--good), #16B26A);
+  box-shadow: 0 4px 14px rgba(31, 157, 85, .25);
 }
+.customerContactAvatar { border: 3px solid var(--white); background-clip: padding-box; }
 .customerContactAvatarFallback {
   display: flex; align-items: center; justify-content: center;
-  background: var(--good-tint); color: var(--good);
+  color: var(--good);
 }
-.customerContactHeader small { display: block; color: #2F7A4C; margin-bottom: 3px; font-weight: 600; }
-.customerContactHeader h3 { margin: 0 0 4px; font-size: 17px; }
-.customerContactRating { font-size: 13px; color: var(--ink-soft); }
+.customerContactHeader small {
+  display: inline-flex; align-items: center; gap: 5px;
+  color: #1F7A45; margin-bottom: 5px; font-weight: 700; font-size: 12px;
+  letter-spacing: .2px;
+}
+.customerContactHeader small::before {
+  content: ""; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--good); box-shadow: 0 0 0 3px var(--good-tint);
+}
+.customerContactHeader h3 { margin: 0 0 5px; font-size: 17.5px; font-family: var(--display); }
+.customerContactRating {
+  display: inline-flex; align-items: center; font-size: 12.5px; font-weight: 700;
+  color: #1F7A45; background: rgba(31, 157, 85, .1); padding: 3px 10px; border-radius: 100px;
+}
 
 .customerContactCall {
-  display: flex; align-items: center; gap: 10px;
-  margin-top: 15px; padding: 13px 16px;
+  display: flex; align-items: center; gap: 12px;
+  margin-top: 16px; padding: 12px 12px 12px 16px;
   background: var(--good); color: #fff;
-  border-radius: 13px; text-decoration: none;
+  border-radius: 14px; text-decoration: none;
   font-weight: 700; font-size: 14px;
-  box-shadow: 0 8px 18px rgba(31, 157, 85, .25);
+  box-shadow: 0 8px 18px rgba(31, 157, 85, .28);
+  transition: box-shadow .2s ease, transform .2s ease;
 }
-.customerContactCall svg { flex-shrink: 0; }
+.customerContactCall:hover { box-shadow: 0 10px 22px rgba(31, 157, 85, .35); transform: translateY(-1px); }
+.customerContactCall svg {
+  flex-shrink: 0; width: 34px; height: 34px; padding: 8px; box-sizing: border-box;
+  background: rgba(255, 255, 255, .18); border-radius: 50%;
+}
 .customerContactCall span:first-of-type { flex: 1; }
 .customerContactNumber {
   direction: ltr; font-weight: 700; letter-spacing: .3px;
-  background: rgba(255, 255, 255, .18); padding: 3px 10px; border-radius: 8px;
+  background: rgba(255, 255, 255, .22); padding: 5px 12px; border-radius: 9px;
 }
 .customerContactCall--loading {
   background: var(--mist); color: var(--ink-soft);
   box-shadow: none; font-weight: 600;
 }
+.customerContactCall--loading svg { background: var(--white); color: var(--ink-faint); }
 
 /* ---------- 13. MODAL ---------- */
 .overlay {
