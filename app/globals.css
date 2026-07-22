@@ -526,34 +526,14 @@ header {
 .driverAvatarFallback { display: flex; align-items: center; justify-content: center; background: var(--route-tint); font-size: 26px; }
 .driverInfoHeader small { display: block; color: var(--ink-soft); margin-bottom: 4px; }
 .driverInfoHeader h3 { margin: 0 0 4px; font-size: 18px; }
-.driverInfoRating { font-size: 13px; color: var(--ink-soft); }
 
-.driverVehicleChip {
-  display: flex; align-items: center; gap: 8px;
-  margin-top: 14px; padding: 9px 13px; width: fit-content;
-  background: var(--route-tint); color: var(--route);
-  border-radius: 100px; font-size: 13px; font-weight: 600;
+.driverInfoDetails { display: grid; gap: 9px; margin-top: 15px; padding-top: 14px; border-top: 1px solid var(--mist); }
+.driverInfoDetails a, .driverInfoDetails > div {
+  display: flex; align-items: center; gap: 9px; padding: 10px 12px;
+  background: var(--mist); border-radius: 10px; color: var(--ink); text-decoration: none;
 }
-.driverVehicleChip i {
-  width: 3px; height: 3px; border-radius: 50%;
-  background: var(--route); opacity: .5; font-style: normal;
-}
-.driverVehiclePlate { direction: ltr; }
-
-.driverCallButton {
-  display: flex; align-items: center; gap: 10px;
-  margin-top: 12px; padding: 13px 16px;
-  background: var(--route); color: #fff;
-  border-radius: 13px; text-decoration: none;
-  font-weight: 700; font-size: 14px;
-  box-shadow: 0 8px 18px rgba(20, 45, 90, .22);
-}
-.driverCallButton svg { flex-shrink: 0; }
-.driverCallButton span:first-of-type { flex: 1; }
-.driverCallNumber {
-  direction: ltr; font-weight: 700; letter-spacing: .3px;
-  background: rgba(255, 255, 255, .18); padding: 3px 10px; border-radius: 8px;
-}
+.driverInfoDetails a { color: var(--route); font-weight: 600; }
+.driverInfoDetails svg { width: 18px; height: 18px; flex-shrink: 0; }
 
 /* ---------- 12b. CUSTOMER TRUST CHIP (قبل الإسناد) ---------- */
 .customerTrustChip {
