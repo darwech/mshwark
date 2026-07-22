@@ -1553,6 +1553,21 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
       }
     })();
 
+    // ثبّت السعر المقبول على الطلب نفسه كمصدر واحد للسعر النهائي.
+    // لا نعدّل RPC الحالية حتى نحافظ على مسار الإسناد والإشعارات المستقر.
+    const { error: priceError } = await supabase
+      .from("orders")
+      .update({ delivery_fee: Number(item.price) })
+      .eq("id", item.order_id)
+      .eq("customer_id", profile.id);
+
+    if (priceError) {
+      console.error("SAVE AGREED PRICE ERROR:", priceError);
+      flash("تم قبول المندوب، لكن تعذر تثبيت السعر النهائي. حدّث الصفحة وحاول مرة أخرى.");
+      refresh();
+      return;
+    }
+
     flash("تم قبول عرض المندوب بنجاح");
     refresh();
   }
@@ -1965,15 +1980,15 @@ function Driver({ profile, orders, refresh, flash }) {
         (payload) => {
           console.log("DRIVER OFFER UPDATE:", payload);
 
-          if (
-            payload.new?.driver_id === profile.id &&
-            payload.new?.status === "accepted"
-          ) {
-            // مبنعملش new Notification() هنا: السيرفر بيبعت Push حقيقي
-            // للمندوب لحظة قبول العميل للعرض (شوف /api/push/accept-offer).
-            // الإشعار داخل الصفحة (flash) كافي هنا عشان التحديث الفوري
-            // وهو المستخدم مفتوح على التطبيق فعلاً.
-            flash("🎉 تم قبول عرضك من العميل");
+          if (payload.new?.status === "accepted") {
+            // قبول أي عرض يعني أن الطلب لم يعد متاحًا لباقي المندوبين.
+            // تحديث القائمة هنا مهم لأن تحديث orders قد لا يصل للمندوب الذي
+            // فقد صلاحية رؤية الطلب بعد إسناده بسبب RLS. نستخدم نفس القناة
+            // الموجودة بدل إنشاء قناة Realtime جديدة.
+            if (payload.new?.driver_id === profile.id) {
+              flash("🎉 تم قبول عرضك من العميل");
+            }
+
             refresh();
           }
         },
