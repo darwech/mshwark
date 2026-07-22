@@ -2833,7 +2833,9 @@ function OrderCard({
                   className="driverAvatar"
                 />
               ) : (
-                <div className="driverAvatarFallback">👤</div>
+                <div className="driverAvatarFallback">
+                  <User size={26} />
+                </div>
               )}
 
               <div>
@@ -2841,35 +2843,37 @@ function OrderCard({
 
                 <h3>{o.driver.full_name || "المندوب"}</h3>
 
-                <div>
+                <div className="driverInfoRating">
                   ⭐ {Number(o.driver.rating || 0).toFixed(1)}
                   {o.driver.rating_count
-                    ? ` (${o.driver.rating_count} تقييم)`
+                    ? ` · ${o.driver.rating_count} تقييم`
                     : ""}
                 </div>
               </div>
             </div>
 
-            <div className="driverInfoDetails">
-              {o.driver.phone && (
-                <a href={`tel:${o.driver.phone}`}>
-                  <Phone />
-                  <span>{o.driver.phone}</span>
-                </a>
-              )}
+            {o.driver.vehicle_type && (
+              <div className="driverVehicleChip">
+                <Car size={15} />
+                <span>{o.driver.vehicle_type}</span>
+                {o.driver.vehicle_plate && (
+                  <>
+                    <i />
+                    <span className="driverVehiclePlate">
+                      {o.driver.vehicle_plate}
+                    </span>
+                  </>
+                )}
+              </div>
+            )}
 
-              {o.driver.vehicle_type && (
-                <div>
-                  <Car />
-                  <span>
-                    {o.driver.vehicle_type}
-                    {o.driver.vehicle_plate
-                      ? ` — ${o.driver.vehicle_plate}`
-                      : ""}
-                  </span>
-                </div>
-              )}
-            </div>
+            {o.driver.phone && (
+              <a className="driverCallButton" href={`tel:${o.driver.phone}`}>
+                <Phone size={18} />
+                <span>الاتصال بالمندوب</span>
+                <span className="driverCallNumber">{o.driver.phone}</span>
+              </a>
+            )}
           </div>
         )}
       </div>
