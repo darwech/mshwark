@@ -302,6 +302,24 @@ export default function Home() {
     };
   }, [session]);
   async function handleLogout() {
+    // تنظيف قبل الخروج: نمنع وصول أي إشعارات للحساب ده وهو مسجل خروج
+    // (تحويل is_available لـ false + مسح توكنات الإشعارات). بنستخدم
+    // Bearer token الحالي هنا لأننا لسه في نفس اللحظة قبل إنهاء الجلسة.
+    try {
+      if (session?.access_token) {
+        await fetch("/api/push/logout-cleanup", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+      }
+    } catch (cleanupError) {
+      // حتى لو فشل التنظيف، تسجيل الخروج نفسه لازم يكمل عادي
+      console.error("Logout cleanup error:", cleanupError);
+    }
+
     setProfile(null);
     setSession(null);
 
