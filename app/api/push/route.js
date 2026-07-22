@@ -77,16 +77,19 @@ export async function POST(request) {
       });
     }
 
-    // 5) إرسال لكل مندوب على قناتيه (متصفح + تطبيق موبايل)
-    let sent = 0;
+    // 5) إرسال لكل مندوب على قناتيه (متصفح + تطبيق موبايل) بالتوازي
+    //    بدل التتابع، عشان أول مندوب وآخر واحد ياخدوا الإشعار في نفس اللحظة تقريبًا
+    const results = await Promise.all(
+      driverIds.map((driverId) =>
+        sendPushToUser(supabaseAdmin, driverId, {
+          title,
+          body: message,
+          url,
+        })
+      )
+    );
 
-    for (const driverId of driverIds) {
-      sent += await sendPushToUser(supabaseAdmin, driverId, {
-        title,
-        body: message,
-        url,
-      });
-    }
+    const sent = results.reduce((total, count) => total + count, 0);
 
     return Response.json({
       success: true,
