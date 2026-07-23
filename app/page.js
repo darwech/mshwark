@@ -323,7 +323,15 @@ export default function Home() {
     setProfile(null);
     setSession(null);
 
-    const { error } = await supabase.auth.signOut();
+    // scope: "local" — نلغي جلسة *هذا الجهاز* فقط. القيمة الافتراضية
+    // كانت "global" (تلغي كل جلسات نفس الحساب على كل الأجهزة)، وده كان
+    // سبب bug: لو نفس الحساب مفتوح على جهازين (مثلاً Laptop + Phone)،
+    // تسجيل الخروج من جهاز واحد كان بيبطل الـ session بتاعة الجهاز التاني
+    // عند GoTrue (حتى لو access token لسه صالح شكليًا)، فكانت طلبات مثل
+    // /api/push (اللي بتعمل getUser() — تحقق حي من السيرفر) بترجع 401
+    // وتفشل بصمت، رغم إن عمليات زي إنشاء الطلب (عبر PostgREST) كانت
+    // بتنجح لأنها بتتحقق من الـ JWT محليًا فقط بدون تواصل مع GoTrue.
+    const { error } = await supabase.auth.signOut({ scope: "local" });
 
     if (error) {
       console.error("Logout error:", error);
