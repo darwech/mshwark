@@ -1827,6 +1827,10 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
                   placeholder="اسم المحل / المطعم / الصيدلية"
                 />
 
+                <label>عنوان التوصيل</label>
+
+                <input name="address" required placeholder="العنوان بالتفصيل" />
+
                 <label>القيمة المتوقعة للمشتريات</label>
 
                 <input
@@ -1836,23 +1840,11 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
                   required
                   placeholder={`حد حسابك ${profile.purchase_limit || 500} جنيه`}
                 />
-
-                <label>عنوان التوصيل</label>
-
-                <input name="address" required placeholder="العنوان بالتفصيل" />
               </>
             )}
 
             {serviceType === "delivery" && (
               <>
-                <label>إيه الحاجة اللي هتتوصل؟</label>
-
-                <textarea
-                  name="packageDescription"
-                  required
-                  placeholder="مثال: شنطة، أوراق، كرتونة..."
-                />
-
                 <label>عنوان الاستلام</label>
 
                 <input
@@ -1867,6 +1859,14 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
                   name="address"
                   required
                   placeholder="المكان اللي الحاجة هتتسلم فيه"
+                />
+
+                <label>إيه الحاجة اللي هتتوصل؟</label>
+
+                <textarea
+                  name="packageDescription"
+                  required
+                  placeholder="مثال: شنطة، أوراق، كرتونة..."
                 />
 
                 <label>اسم المستلم</label>
@@ -1914,10 +1914,6 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
                   required
                   placeholder="الوجهة بالتفصيل"
                 />
-
-                <label>موعد التوصيلة</label>
-
-                <input name="rideTime" type="datetime-local" />
 
                 <label>عدد الركاب</label>
 
