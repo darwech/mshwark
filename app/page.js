@@ -1827,6 +1827,10 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
                   placeholder="اسم المحل / المطعم / الصيدلية"
                 />
 
+                <label>عنوان التوصيل</label>
+
+                <input name="address" required placeholder="العنوان بالتفصيل" />
+
                 <label>القيمة المتوقعة للمشتريات</label>
 
                 <input
@@ -1836,23 +1840,11 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
                   required
                   placeholder={`حد حسابك ${profile.purchase_limit || 500} جنيه`}
                 />
-
-                <label>عنوان التوصيل</label>
-
-                <input name="address" required placeholder="العنوان بالتفصيل" />
               </>
             )}
 
             {serviceType === "delivery" && (
               <>
-                <label>إيه الحاجة اللي هتتوصل؟</label>
-
-                <textarea
-                  name="packageDescription"
-                  required
-                  placeholder="مثال: شنطة، أوراق، كرتونة..."
-                />
-
                 <label>عنوان الاستلام</label>
 
                 <input
@@ -1867,6 +1859,14 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
                   name="address"
                   required
                   placeholder="المكان اللي الحاجة هتتسلم فيه"
+                />
+
+                <label>إيه الحاجة اللي هتتوصل؟</label>
+
+                <textarea
+                  name="packageDescription"
+                  required
+                  placeholder="مثال: شنطة، أوراق، كرتونة..."
                 />
 
                 <label>اسم المستلم</label>
@@ -1914,10 +1914,6 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
                   required
                   placeholder="الوجهة بالتفصيل"
                 />
-
-                <label>موعد التوصيلة</label>
-
-                <input name="rideTime" type="datetime-local" />
 
                 <label>عدد الركاب</label>
 
@@ -2373,8 +2369,8 @@ function Driver({ profile, orders, refresh, flash }) {
           onClick={changeAvailability}
         >
           {profile.is_available
-            ? "● متاح لاستقبال المشاوير"
-            : "○ غير متاح حاليًا"}
+            ? "متاح لاستقبال المشاوير"
+            : "غير متاح حاليًا"}
         </button>
       </section>
 
@@ -2671,10 +2667,10 @@ function OrderCard({
 
           <h3>
             {o.service_type === "ride"
-              ? `${o.ride_pickup || ""} ← ${o.ride_destination || ""}`
+              ? `الوجهة: ${o.ride_pickup || ""} ← ${o.ride_destination || ""}`
               : o.service_type === "delivery"
-                ? o.package_description || o.items_description
-                : o.items_description}
+                ? `المطلوب توصيله: ${o.package_description || o.items_description || ""}`
+                : `المطلوب: ${o.items_description || ""}`}
           </h3>
         </div>
 
@@ -2782,6 +2778,8 @@ function OrderCard({
         </div>
       )}
 
+      <h4 className="detailsHeading">تفاصيل الطلب</h4>
+
       <div className="details">
         {/* اشتريهولي */}
 
@@ -2825,11 +2823,12 @@ function OrderCard({
               المستلم: {o.recipient_name}
             </p>
 
-            <p>
-              <Phone />
-
-              {o.recipient_phone}
-            </p>
+            {o.recipient_phone && (
+              <a className="detailsCall" href={`tel:${o.recipient_phone}`}>
+                <Phone />
+                رقم المستلم: {o.recipient_phone}
+              </a>
+            )}
           </>
         )}
 
@@ -2895,7 +2894,7 @@ function OrderCard({
               {o.driver.phone && (
                 <a href={`tel:${o.driver.phone}`}>
                   <Phone />
-                  <span>{o.driver.phone}</span>
+                  <span>الاتصال بالمندوب: {o.driver.phone}</span>
                 </a>
               )}
 
@@ -3073,7 +3072,7 @@ function OrderCard({
       {/* إرسال عرض */}
 
       {driver && o.status === "requested" && !o.driver_id && (
-        <button className="primary" onClick={() => offer(o.id)}>
+        <button className="primary newJobAction" onClick={() => offer(o.id)}>
           تحديد سعر المشوار وإرساله
         </button>
       )}
@@ -3127,7 +3126,7 @@ function OrderCard({
       )}
 
       {o.cancelled_at && o.status === "cancelled" && (
-        <div className="ratedMessage">
+        <div className="cancelledMessage">
           <XCircle />
           {o.cancel_reason ? `تم إلغاء الطلب - ${o.cancel_reason}` : "تم إلغاء هذا الطلب"}
         </div>
