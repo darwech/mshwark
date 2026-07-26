@@ -8,10 +8,14 @@ import { PushNotifications } from "@capacitor/push-notifications";
 import AnimatedSplash from "./components/AnimatedSplash";
 import { DialogProvider, useDialog } from "./components/AppDialog";
 import {
+  Home as HomeIcon,
   Bike,
   Package,
   User,
   LogOut,
+  Bell,
+  BellOff,
+  Settings,
   ShieldCheck,
   Store,
   MapPin,
@@ -76,6 +80,20 @@ const serviceInfo = {
 };
 
 const money = (value) => `${Number(value || 0).toLocaleString("ar-EG")} ج`;
+
+// عرض الوقت النسبي لإنشاء الطلب فقط (تنسيق عرض بحت - بدون أي تعديل على البيانات
+// أو مصدرها؛ o.created_at موجود بالفعل ضمن بيانات الطلب المجلوبة من Supabase)
+const timeAgo = (dateString) => {
+  if (!dateString) return "";
+  const diffMs = Date.now() - new Date(dateString).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "الآن";
+  if (mins < 60) return `منذ ${mins} د`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `منذ ${hours} س`;
+  const days = Math.floor(hours / 24);
+  return `منذ ${days} ي`;
+};
 
 export default function Home() {
   return (
@@ -437,6 +455,7 @@ function HomeInner() {
           drivers={drivers}
           refresh={refresh}
           flash={flash}
+          openAccount={() => setShowAccount(true)}
         />
       ) : (
         <Driver
@@ -444,6 +463,7 @@ function HomeInner() {
           orders={orders}
           refresh={refresh}
           flash={flash}
+          openAccount={() => setShowAccount(true)}
         />
       )}
 
@@ -841,6 +861,14 @@ function urlBase64ToUint8Array(base64String) {
   return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
 }
 
+// ترحيب بسيط حسب وقت اليوم — نص عرض بس، من غير أي state أو تأثير على البيانات
+function greetingWord() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "صباح الخير";
+  if (hour < 17) return "أهلاً";
+  return "مساء الخير";
+}
+
 function Header({ profile, logout, openAccount }) {
   const dialog = useDialog();
   const [pushGranted, setPushGranted] = useState(false);
@@ -1072,12 +1100,12 @@ function Header({ profile, logout, openAccount }) {
           }
           onClick={() => activatePush({ silent: false })}
         >
-          {pushGranted ? "🔔" : "🔕"}
+          {pushGranted ? <Bell size={19} /> : <BellOff size={19} />}
         </button>
-        <div className="hello">أهلاً، {profile.full_name?.split(" ")[0]}</div>
+        <div className="hello">{greetingWord()}، {profile.full_name?.split(" ")[0]}</div>
 
         <button className="icon" onClick={openAccount} title="حسابي">
-          ⚙️
+          <Settings size={19} />
         </button>
 
         <button className="icon" onClick={logout} title="تسجيل الخروج">
@@ -1089,12 +1117,49 @@ function Header({ profile, logout, openAccount }) {
 }
 
 /* =========================================
+   BOTTOM NAVIGATION — تنقل سفلي ثابت (UI بحت)
+   بيستخدم نفس الـ props اللي كانت موجودة أصلاً (openAccount) من غير
+   أي state أو منطق جديد يمس البيانات أو الـ Supabase queries.
+========================================= */
+
+function BottomNav({ active, setActive, items, openAccount }) {
+  const icons = { home: HomeIcon, orders: Package, account: User };
+
+  return (
+    <nav className="bottomNav">
+      {items.map((item) => {
+        const Icon = icons[item.icon] || Home;
+        const isActive = active === item.key;
+
+        return (
+          <button
+            key={item.key}
+            className={`bottomNavItem${isActive ? " active" : ""}`}
+            onClick={() => {
+              if (item.key === "account") {
+                openAccount?.();
+                return;
+              }
+              setActive(item.key);
+            }}
+          >
+            <Icon size={21} />
+            <span>{item.label}</span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+/* =========================================
    CUSTOMER
 ========================================= */
 
-function Customer({ profile, orders, drivers, refresh, flash }) {
+function Customer({ profile, orders, drivers, refresh, flash, openAccount }) {
   const dialog = useDialog();
   const [show, setShow] = useState(false);
+  const [activeTab, setActiveTab] = useState("home"); // تبويب الشريط السفلي - عرض فقط، بدون أي تأثير على البيانات
 
   const [serviceType, setServiceType] = useState(null);
   const [orderOffers, setOrderOffers] = useState([]);
@@ -1266,6 +1331,7 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
   const [showAllOrders, setShowAllOrders] = useState(false);
 
   const visibleOrders = showAllOrders ? orders : orders.slice(0, 3);
+  const recentOrders = orders.slice(0, 3); // معاينة سريعة للرئيسية - نفس بيانات orders، بدون أي query جديد
 
   const availableDrivers = drivers.filter((driver) => {
     if (serviceType === "purchase") {
@@ -1687,18 +1753,16 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
   }
   return (
     <>
+      {activeTab === "home" && (
+      <>
       <section className="blueHero">
-        <small>مشوارك V3</small>
-
-        <h1>مشوارك النهارده إيه؟</h1>
-
-        <p>
-          شراء، توصيل حاجة، أو توصيلة ليك.. اختار الخدمة المناسبة وسيب الباقي
-          علينا.
-        </p>
+        <div className="dashIntroText">
+          <h1>مشوارك النهارده إيه؟</h1>
+          <p>اختار الخدمة اللي محتاجها وسيب الباقي علينا.</p>
+        </div>
       </section>
 
-      <div className="serviceGrid threeServices">
+      <div className="serviceGrid threeServices dashServiceGrid">
         <button className="serviceCard" onClick={() => openService("purchase")}>
           <ShoppingBag size={42} />
 
@@ -1727,7 +1791,7 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
         </button>
       </div>
 
-      <div className="stats">
+      <div className="stats dashStats">
         <div>
           <Package />
 
@@ -1753,6 +1817,50 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
         </div>
       </div>
 
+      <section className="section dashRecent">
+        <div className="title">
+          <div>
+            <h2>آخر الطلبات</h2>
+          </div>
+
+          {orders.length > 0 && (
+            <button
+              type="button"
+              className="viewAllLink"
+              onClick={() => setActiveTab("orders")}
+            >
+              عرض الكل
+            </button>
+          )}
+        </div>
+
+        {recentOrders.length ? (
+          recentOrders.map((order) => (
+            <OrderCard
+              key={order.id}
+              o={order}
+              customer
+              setOfferPrice={setSuggestedPrice}
+              currentUser={profile}
+              decide={decide}
+              offers={orderOffers.filter(
+                (offer) => offer.order_id === order.id,
+              )}
+              drivers={drivers}
+              acceptDriverOffer={acceptDriverOffer}
+              cancelOrder={cancelOrder}
+              refresh={refresh}
+              flash={flash}
+            />
+          ))
+        ) : (
+          <Empty text="لسه معملتش أي مشوار." />
+        )}
+      </section>
+      </>
+      )}
+
+      {activeTab === "orders" && (
       <section className="section">
         <div className="title">
           <div>
@@ -1806,6 +1914,7 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
           </button>
         )}
       </section>
+      )}
 
       {show && (
         <div
@@ -2001,6 +2110,17 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
           </form>
         </div>
       )}
+
+      <BottomNav
+        active={activeTab}
+        setActive={setActiveTab}
+        openAccount={openAccount}
+        items={[
+          { key: "home", label: "الرئيسية", icon: "home" },
+          { key: "orders", label: "طلباتي", icon: "orders" },
+          { key: "account", label: "حسابي", icon: "account" },
+        ]}
+      />
     </>
   );
 }
@@ -2008,11 +2128,13 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
    DRIVER
 ========================================= */
 
-function Driver({ profile, orders, refresh, flash }) {
+function Driver({ profile, orders, refresh, flash, openAccount }) {
   const dialog = useDialog();
   const [showAllOrders, setShowAllOrders] = useState(false);
+  const [activeTab, setActiveTab] = useState("home"); // تبويب الشريط السفلي - عرض فقط
 
   const visibleOrders = showAllOrders ? orders : orders.slice(0, 3);
+  const recentOrders = orders.slice(0, 3); // معاينة سريعة للرئيسية - نفس بيانات orders، بدون أي query جديد
   // إشعار المندوب عند قبول العميل لعرضه
   useEffect(() => {
     if (!profile?.id) return;
@@ -2388,14 +2510,13 @@ function Driver({ profile, orders, refresh, flash }) {
 
   return (
     <>
+      {activeTab === "home" && (
+      <>
       <section className="blueHero">
-        <small>مندوب مشوارك</small>
-
-        <h1>جاهز لمشوار جديد؟ 🛵</h1>
-
-        <p>
-          راجع تفاصيل العميل والمشوار كويس قبل ما تبدأ التنفيذ أو تدفع أي مبلغ.
-        </p>
+        <div className="dashIntroText">
+          <h1>جاهز لمشوار جديد؟ 🛵</h1>
+          <p>راجع التفاصيل كويس قبل ما تبدأ التنفيذ أو تدفع أي مبلغ.</p>
+        </div>
 
         <button
           className={profile.is_available ? "online" : "offline"}
@@ -2407,7 +2528,7 @@ function Driver({ profile, orders, refresh, flash }) {
         </button>
       </section>
 
-      <div className="stats">
+      <div className="stats dashStats">
         <div>
           <Package />
 
@@ -2433,6 +2554,45 @@ function Driver({ profile, orders, refresh, flash }) {
         </div>
       </div>
 
+      <section className="section dashRecent">
+        <div className="title">
+          <div>
+            <h2>آخر المشاوير</h2>
+          </div>
+
+          {orders.length > 0 && (
+            <button
+              type="button"
+              className="viewAllLink"
+              onClick={() => setActiveTab("orders")}
+            >
+              عرض الكل
+            </button>
+          )}
+        </div>
+
+        {recentOrders.length ? (
+          recentOrders.map((order) => (
+            <OrderCard
+              key={order.id}
+              o={order}
+              driver
+              currentUser={profile}
+              offer={sendOffer}
+              next={nextStatus}
+              cancelOrder={cancelOrder}
+              refresh={refresh}
+              flash={flash}
+            />
+          ))
+        ) : (
+          <Empty text="مفيش مشاوير موجهة ليك حاليًا." />
+        )}
+      </section>
+      </>
+      )}
+
+      {activeTab === "orders" && (
       <section className="section">
         <div className="title">
           <div>
@@ -2481,6 +2641,18 @@ function Driver({ profile, orders, refresh, flash }) {
           </button>
         )}
       </section>
+      )}
+
+      <BottomNav
+        active={activeTab}
+        setActive={setActiveTab}
+        openAccount={openAccount}
+        items={[
+          { key: "home", label: "الرئيسية", icon: "home" },
+          { key: "orders", label: "مشاويري", icon: "orders" },
+          { key: "account", label: "حسابي", icon: "account" },
+        ]}
+      />
     </>
   );
 }
@@ -2507,6 +2679,10 @@ function OrderCard({
 }) {
   const dialog = useDialog();
   const [ratingOpen, setRatingOpen] = useState(false);
+
+  // فتح/قفل قسم "تفاصيل الطلب" — عرض بصري بحت زي ratingOpen بالظبط،
+  // مفيش أي تأثير على البيانات أو الاستعلامات
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const [alreadyRated, setAlreadyRated] = useState(false);
 
@@ -2708,9 +2884,15 @@ function OrderCard({
           </h3>
         </div>
 
-        <span className={`status ${o.status}`}>
-          {statusText[o.status] || o.status}
-        </span>
+        <div className="orderTopMeta">
+          <span className={`status ${o.status}`}>
+            {statusText[o.status] || o.status}
+          </span>
+          <span className="orderTime">
+            <Clock size={12} />
+            {timeAgo(o.created_at)}
+          </span>
+        </div>
       </div>
 
       {/* معلومات العميل للمندوب - قبل الإسناد: بطاقة ثقة مختصرة بس */}
@@ -2812,7 +2994,17 @@ function OrderCard({
         </div>
       )}
 
-      <h4 className="detailsHeading">تفاصيل الطلب</h4>
+      <button
+        type="button"
+        className="detailsToggle"
+        onClick={() => setDetailsOpen((open) => !open)}
+        aria-expanded={detailsOpen}
+      >
+        <h4 className={`detailsHeading${detailsOpen ? " open" : ""}`}>تفاصيل الطلب</h4>
+      </button>
+
+      <div className={`detailsCollapse${detailsOpen ? " open" : ""}`}>
+      <div className="detailsCollapseInner">
 
       <div className="details">
         {/* اشتريهولي */}
@@ -2907,7 +3099,7 @@ function OrderCard({
                   className="driverAvatar"
                 />
               ) : (
-                <div className="driverAvatarFallback">👤</div>
+                <div className="driverAvatarFallback"><User size={26} /></div>
               )}
 
               <div>
@@ -2946,6 +3138,9 @@ function OrderCard({
             </div>
           </div>
         )}
+      </div>
+
+      </div>
       </div>
 
       {o.notes && (
@@ -3068,7 +3263,7 @@ function OrderCard({
                       className="offerAvatar"
                     />
                   ) : (
-                    <div className="offerAvatarFallback">👤</div>
+                    <div className="offerAvatarFallback"><User size={22} /></div>
                   )}
 
                   <div className="offerDriverData">
