@@ -2,6 +2,7 @@ package com.mshwark.app;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.content.Intent;
 import android.graphics.Color;
 import android.media.AudioAttributes;
 import android.net.Uri;
@@ -18,9 +19,46 @@ public class MainActivity extends BridgeActivity {
         // بالظبط (نفس القيمة المستخدمة في styles.xml و capacitor.config.json
         // ونفس أول لون في تدرج AnimatedSplash بالـ CSS) عشان مفيش أي قفزة
         // لونية محسوسة وقت الانتقال بين شاشة الفتح الأصلية وشاشة الحركة
-        this.bridge.getWebView().setBackgroundColor(Color.parseColor("#0E2745"));
+        if (this.bridge != null && this.bridge.getWebView() != null) {
+            this.bridge.getWebView().setBackgroundColor(Color.parseColor("#0E2745"));
+        }
 
         createNotificationChannels();
+        handleNotificationIntent(getIntent());
+    }
+
+    @Override
+    public void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleNotificationIntent(intent);
+    }
+
+    // لو التطبيق اتفتح (أو كان شغال بالفعل) بسبب ضغط على إشعار، بنودّي
+    // الـ WebView لصفحة الطلب/الرابط اللي جاي من السيرفر مع الإشعار
+    private void handleNotificationIntent(Intent intent) {
+        if (intent == null || this.bridge == null || this.bridge.getWebView() == null) return;
+
+        String url = intent.getStringExtra("notificationUrl");
+        if (url == null || url.isEmpty()) return;
+
+        String safeUrl = url.replace("'", "");
+        this.bridge.getWebView().post(() ->
+                this.bridge.getWebView().evaluateJavascript(
+                        "window.location.href='" + safeUrl + "'", null)
+        );
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        AppState.setForeground(true);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        AppState.setForeground(false);
     }
 
     private void createNotificationChannels() {
