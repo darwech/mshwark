@@ -12,18 +12,23 @@
     <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
-        <item name="android:background">@null</item>
+        <!-- مهم جدًا: لازم نحدد لون صريح هنا. لو سبناها @null، أندرويد بيرجع
+             للون الافتراضي بتاع Theme.AppCompat.DayNight (أبيض غالبًا)
+             في اللحظة اللي بين ما splash الأصلي بيقفل ولحد ما الـ WebView
+             يرسم أول فريم بتاعه — وده اللي كان بيسبب الومضة البيضاء -->
+        <item name="android:windowBackground">@color/splash_background</item>
+        <item name="android:background">@color/splash_background</item>
     </style>
 
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <!-- خلفية اللحظة الأولى: صورة العلامة التجارية نفسها (نفس تصميم شاشة الفتح)
              بدون أي أيقونة منفصلة فوقها -->
-        <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
 
         <!-- أيقونة شفافة تمامًا عشان نظام أندرويد ما يعرضش حرف الـ M الافتراضي -->
         <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon_blank</item>
-        <item name="windowSplashScreenIconBackgroundColor">@color/ic_launcher_background</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/splash_background</item>
         <item name="windowSplashScreenAnimationDuration">1</item>
 
         <!-- بعد إطار splash النظام الإجباري، سلّم فورًا لثيم التطبيق العادي

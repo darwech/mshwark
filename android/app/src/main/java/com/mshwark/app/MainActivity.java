@@ -9,9 +9,10 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // نحدد خلفية الـ WebView من أول لحظة تبقى نفس أزرق هوية التطبيق
-        // بدل اللون الأسود الافتراضي، عشان منشوفش أي ومضة سوداء بين
-        // شاشة الفتح الأصلية وشاشة الحركة
-        this.bridge.getWebView().setBackgroundColor(Color.parseColor("#0B2050"));
+        // نحدد خلفية الـ WebView من أول لحظة تبقى نفس لون splash_background
+        // بالظبط (نفس القيمة المستخدمة في styles.xml و capacitor.config.json
+        // ونفس أول لون في تدرج AnimatedSplash بالـ CSS) عشان مفيش أي قفزة
+        // لونية محسوسة وقت الانتقال بين شاشة الفتح الأصلية وشاشة الحركة
+        this.bridge.getWebView().setBackgroundColor(Color.parseColor("#0E2745"));
     }
 }

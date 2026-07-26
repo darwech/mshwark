@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- لون خاص بشاشة الـ Splash بس (منفصل عن ic_launcher_background اللي
+         بتستخدمه أيقونة التطبيق على الشاشة الرئيسية). القيمة دي مطابقة
+         تمامًا لأول لون في تدرج AnimatedSplash داخل globals.css
+         (متغير primary-deep بقيمة 0E2745) عشان مفيش أي قفزة لونية محسوسة
+         وقت الانتقال من splash الأصلي بتاع أندرويد للشاشة المتحركة بتاعتنا -->
+    <color name="splash_background">#0E2745</color>
+</resources>

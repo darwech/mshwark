@@ -1166,3 +1166,38 @@ body.keyboard-open .modal { margin-top: 6px; }
     transform: none !important;
   }
 }
+/* ==========================================================
+   APP DIALOG — بديل موحّد لـ alert() / confirm() / prompt()
+   بيستخدم نفس كلاسات .overlay و .modal و .primary/.ghost/.accept/.reject
+   الموجودة أصلاً، فمفيش أي تصميم جديد غريب عن باقي التطبيق.
+   ========================================================== */
+.appDialogModal {
+  width: min(400px, 92%);
+  text-align: center;
+  gap: 14px;
+}
+
+.appDialogMessage {
+  margin: 6px 0 4px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--ink);
+  white-space: pre-line;
+}
+
+.appDialogModal input {
+  text-align: center;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.appDialogModal .actions {
+  margin-top: 6px;
+}
+
+.appDialogModal > .primary {
+  /* الزرار بتاع alert البسيط (زرار واحد "حسنًا") */
+  position: static;
+  margin: 6px 0 0;
+  width: 100%;
+}

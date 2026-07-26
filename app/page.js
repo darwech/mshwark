@@ -6,6 +6,7 @@ import { Keyboard } from "@capacitor/keyboard";
 import { Capacitor } from "@capacitor/core";
 import { PushNotifications } from "@capacitor/push-notifications";
 import AnimatedSplash from "./components/AnimatedSplash";
+import { DialogProvider, useDialog } from "./components/AppDialog";
 import {
   Bike,
   Package,
@@ -77,6 +78,15 @@ const serviceInfo = {
 const money = (value) => `${Number(value || 0).toLocaleString("ar-EG")} ج`;
 
 export default function Home() {
+  return (
+    <DialogProvider>
+      <HomeInner />
+    </DialogProvider>
+  );
+}
+
+function HomeInner() {
+  const dialog = useDialog();
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
 
@@ -389,12 +399,12 @@ export default function Home() {
               className="primary"
               onClick={async () => {
                 if (newPassword.length < 6) {
-                  alert("كلمة المرور لازم تكون 6 أحرف على الأقل");
+                  await dialog.alert("كلمة المرور لازم تكون 6 أحرف على الأقل");
                   return;
                 }
 
                 if (newPassword !== confirmNewPassword) {
-                  alert("كلمتا المرور غير متطابقتين");
+                  await dialog.alert("كلمتا المرور غير متطابقتين");
                   return;
                 }
 
@@ -403,11 +413,11 @@ export default function Home() {
                 });
 
                 if (error) {
-                  alert("حدث خطأ: " + error.message);
+                  await dialog.alert("حدث خطأ: " + error.message);
                   return;
                 }
 
-                alert("تم تغيير كلمة المرور بنجاح ✅");
+                await dialog.alert("تم تغيير كلمة المرور بنجاح ✅");
 
                 setNewPassword("");
                 setConfirmNewPassword("");
@@ -447,6 +457,7 @@ export default function Home() {
 ========================================= */
 
 function Auth({ flash }) {
+  const dialog = useDialog();
   const [mode, setMode] = useState("login");
 
   const [role, setRole] = useState("customer");
@@ -786,7 +797,9 @@ function Auth({ flash }) {
             type="button"
             className="forgotPassword"
             onClick={async () => {
-              const email = prompt("اكتب البريد الإلكتروني المسجل به حسابك:");
+              const email = await dialog.prompt(
+                "اكتب البريد الإلكتروني المسجل به حسابك:",
+              );
 
               if (!email) return;
 
@@ -798,11 +811,11 @@ function Auth({ flash }) {
               );
 
               if (error) {
-                alert("حصل خطأ: " + error.message);
+                await dialog.alert("حصل خطأ: " + error.message);
                 return;
               }
 
-              alert(
+              await dialog.alert(
                 "تم إرسال رابط استعادة كلمة المرور إلى بريدك الإلكتروني ✅",
               );
             }}
@@ -829,6 +842,7 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 function Header({ profile, logout, openAccount }) {
+  const dialog = useDialog();
   const [pushGranted, setPushGranted] = useState(false);
 
   // تسجيل توكن إشعارات الموبايل (FCM) أول ما يوصل من النظام
@@ -888,7 +902,7 @@ function Header({ profile, logout, openAccount }) {
   async function activatePush({ silent } = { silent: false }) {
     try {
       if (!profile?.id) {
-        if (!silent) alert("يجب تسجيل الدخول أولًا");
+        if (!silent) await dialog.alert("يجب تسجيل الدخول أولًا");
         return;
       }
 
@@ -910,7 +924,7 @@ function Header({ profile, logout, openAccount }) {
         if (finalPerm !== "granted") {
           setPushGranted(false);
           if (!silent) {
-            alert("لازم تسمح بالإشعارات علشان توصلك تحديثات مشوارك");
+            await dialog.alert("لازم تسمح بالإشعارات علشان توصلك تحديثات مشوارك");
           }
           return;
         }
@@ -920,7 +934,7 @@ function Header({ profile, logout, openAccount }) {
         await PushNotifications.register();
 
         setPushGranted(true);
-        if (!silent) alert("تم تفعيل إشعارات مشوارك بنجاح 🔔");
+        if (!silent) await dialog.alert("تم تفعيل إشعارات مشوارك بنجاح 🔔");
         return;
       }
 
@@ -932,7 +946,7 @@ function Header({ profile, logout, openAccount }) {
         !("serviceWorker" in navigator) ||
         !("PushManager" in window)
       ) {
-        if (!silent) alert("جهازك أو المتصفح لا يدعم إشعارات Push");
+        if (!silent) await dialog.alert("جهازك أو المتصفح لا يدعم إشعارات Push");
         return;
       }
 
@@ -949,7 +963,7 @@ function Header({ profile, logout, openAccount }) {
       if (permission !== "granted") {
         setPushGranted(false);
         if (!silent) {
-          alert("لازم تسمح بالإشعارات علشان توصلك تحديثات مشوارك");
+          await dialog.alert("لازم تسمح بالإشعارات علشان توصلك تحديثات مشوارك");
         }
         return;
       }
@@ -1022,12 +1036,12 @@ function Header({ profile, logout, openAccount }) {
       console.log("PUSH SUBSCRIPTION SAVED:", result);
 
       setPushGranted(true);
-      if (!silent) alert("تم تفعيل إشعارات مشوارك بنجاح 🔔");
+      if (!silent) await dialog.alert("تم تفعيل إشعارات مشوارك بنجاح 🔔");
     } catch (error) {
       console.error("PUSH SUBSCRIPTION ERROR:", error);
 
       if (!silent) {
-        alert("تعذر تفعيل الإشعارات: " + (error?.message || "خطأ غير معروف"));
+        await dialog.alert("تعذر تفعيل الإشعارات: " + (error?.message || "خطأ غير معروف"));
       }
     }
   }
@@ -1079,6 +1093,7 @@ function Header({ profile, logout, openAccount }) {
 ========================================= */
 
 function Customer({ profile, orders, drivers, refresh, flash }) {
+  const dialog = useDialog();
   const [show, setShow] = useState(false);
 
   const [serviceType, setServiceType] = useState(null);
@@ -1599,9 +1614,9 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
   }
 
   async function setSuggestedPrice(orderId, currentPrice) {
-    const val = prompt(
+    const val = await dialog.prompt(
       "اكتب السعر اللي تقترحه للمشوار بالجنيه (سيبها فاضية عشان تشيل الاقتراح)",
-      currentPrice != null ? String(currentPrice) : "",
+      { defaultValue: currentPrice != null ? String(currentPrice) : "", numeric: true, placeholder: "مثلاً 40" },
     );
 
     if (val === null) return; // ضغط إلغاء
@@ -1835,7 +1850,8 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
 
                 <input
                   name="estimatedPrice"
-                  type="number"
+                  type="tel"
+                  inputMode="numeric"
                   min="0"
                   required
                   placeholder={`حد حسابك ${profile.purchase_limit || 500} جنيه`}
@@ -1881,6 +1897,8 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
 
                 <input
                   name="recipientPhone"
+                  type="tel"
+                  inputMode="numeric"
                   required
                   placeholder="رقم هاتف المستلم"
                 />
@@ -1919,7 +1937,8 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
 
                 <input
                   name="passengers"
-                  type="number"
+                  type="tel"
+                  inputMode="numeric"
                   min="1"
                   max="8"
                   defaultValue="1"
@@ -1932,7 +1951,8 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
 
             <input
               name="customerOfferPrice"
-              type="number"
+              type="tel"
+              inputMode="numeric"
               min="0"
               step="0.5"
               placeholder="مثلاً 40 جنيه — سيبها فاضية لو مش عارف تحدد"
@@ -1940,7 +1960,13 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
 
             <label>رقم التواصل</label>
 
-            <input name="phone" required defaultValue={profile.phone || ""} />
+            <input
+              name="phone"
+              type="tel"
+              inputMode="numeric"
+              required
+              defaultValue={profile.phone || ""}
+            />
 
             {availableDrivers.length === 0 && (
               <div className="riskWarning">
@@ -1983,6 +2009,7 @@ function Customer({ profile, orders, drivers, refresh, flash }) {
 ========================================= */
 
 function Driver({ profile, orders, refresh, flash }) {
+  const dialog = useDialog();
   const [showAllOrders, setShowAllOrders] = useState(false);
 
   const visibleOrders = showAllOrders ? orders : orders.slice(0, 3);
@@ -2094,7 +2121,10 @@ function Driver({ profile, orders, refresh, flash }) {
     let fee = presetFee;
 
     if (fee == null) {
-      fee = prompt("اكتب سعر المشوار بالجنيه");
+      fee = await dialog.prompt("اكتب سعر المشوار بالجنيه", {
+        numeric: true,
+        placeholder: "مثلاً 50",
+      });
 
       if (!fee) return;
     }
@@ -2232,7 +2262,10 @@ function Driver({ profile, orders, refresh, flash }) {
       newStatus = flow[currentStatus];
 
       if (currentStatus === "shopping") {
-        const itemsPrice = prompt("اكتب قيمة المشتريات الفعلية بالجنيه");
+        const itemsPrice = await dialog.prompt(
+          "اكتب قيمة المشتريات الفعلية بالجنيه",
+          { numeric: true, placeholder: "مثلاً 120" },
+        );
 
         if (!itemsPrice) return;
 
@@ -2472,6 +2505,7 @@ function OrderCard({
   refresh,
   flash,
 }) {
+  const dialog = useDialog();
   const [ratingOpen, setRatingOpen] = useState(false);
 
   const [alreadyRated, setAlreadyRated] = useState(false);
@@ -3105,15 +3139,15 @@ function OrderCard({
             type="button"
             className="reject"
             onClick={async () => {
-              const confirmed = window.confirm(
+              const confirmed = await dialog.confirm(
                 "متأكد إنك عايز تلغي الطلب ده؟",
               );
 
               if (!confirmed) return;
 
-              const reason = window.prompt(
+              const reason = await dialog.prompt(
                 "سبب الإلغاء (اختياري)",
-                "",
+                { defaultValue: "", placeholder: "اكتب السبب لو حابب" },
               );
 
               await cancelOrder(o.id, reason || null);
