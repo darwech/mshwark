@@ -85,6 +85,7 @@ export async function POST(request) {
           title,
           body: message,
           url,
+          channelId: "agent_channel",
         })
       )
     );

@@ -65,6 +65,8 @@ export async function POST(request) {
     }
 
     const otherUserId = isCustomer ? order.driver_id : order.customer_id;
+    // لو اللي لغى هو العميل، الإشعار رايح للمندوب، والعكس صحيح
+    const channelId = isCustomer ? "agent_channel" : "customer_channel";
 
     if (!otherUserId) {
       return Response.json({ success: true, sent: 0, message: "No other party on order" });
@@ -81,6 +83,7 @@ export async function POST(request) {
       title,
       body: message,
       url: "/",
+      channelId,
     });
 
     return Response.json({ success: true, sent });

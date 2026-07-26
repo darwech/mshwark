@@ -88,6 +88,7 @@ export async function POST(request) {
       title,
       body: message,
       url: "/",
+      channelId: "customer_channel",
     });
 
     return Response.json({ success: true, sent });

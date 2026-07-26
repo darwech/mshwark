@@ -78,6 +78,7 @@ export async function POST(request) {
       title: "🎉 تم قبول عرضك",
       body: `العميل وافق على عرضك بسعر ${offer.price} جنيه، تقدر تبدأ التنفيذ.`,
       url: "/",
+      channelId: "agent_channel",
     });
 
     return Response.json({ success: true, sent });
