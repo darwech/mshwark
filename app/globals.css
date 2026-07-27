@@ -1661,3 +1661,19 @@ body.keyboard-open .modal { margin-top: 6px; }
 @media (prefers-reduced-motion: reduce) {
   .bottomNavItem, .bottomNavItem svg { transition: none; }
 }
+/* Disable text selection */
+* {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Keep inputs editable */
+input,
+textarea,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
