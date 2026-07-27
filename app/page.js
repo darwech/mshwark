@@ -36,6 +36,7 @@ import {
   Wallet,
   MessageSquare,
   Loader2,
+  Camera,
 } from "lucide-react";
 
 const statusText = {
@@ -84,6 +85,70 @@ const serviceInfo = {
 };
 
 const money = (value) => `${Number(value || 0).toLocaleString("ar-EG")} ج`;
+
+// ضغط الصورة قبل الرفع (Canvas) — تصغير الأبعاد الكبيرة وتحويلها لـ JPEG بجودة
+// عالية لتقليل الحجم بدون تأثير ملحوظ على الجودة. لو فشل الضغط لأي سبب، بنرجع
+// الملف الأصلي زي ما هو عشان الرفع يكمل بشكل طبيعي.
+const MAX_PURCHASE_IMAGES = 3;
+
+function compressImageFile(file, { maxDimension = 1600, quality = 0.82 } = {}) {
+  return new Promise((resolve) => {
+    try {
+      const img = new window.Image();
+      const objectUrl = URL.createObjectURL(file);
+
+      img.onload = () => {
+        const scale = Math.min(1, maxDimension / Math.max(img.width, img.height));
+        const width = Math.round(img.width * scale) || img.width;
+        const height = Math.round(img.height * scale) || img.height;
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext("2d");
+
+        if (!ctx) {
+          URL.revokeObjectURL(objectUrl);
+          resolve(file);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            URL.revokeObjectURL(objectUrl);
+
+            if (!blob) {
+              resolve(file);
+              return;
+            }
+
+            resolve(
+              new File(
+                [blob],
+                (file.name || "image").replace(/\.\w+$/, "") + ".jpg",
+                { type: "image/jpeg" },
+              ),
+            );
+          },
+          "image/jpeg",
+          quality,
+        );
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve(file);
+      };
+
+      img.src = objectUrl;
+    } catch {
+      resolve(file);
+    }
+  });
+}
 
 // عرض الوقت النسبي لإنشاء الطلب فقط (تنسيق عرض بحت - بدون أي تعديل على البيانات
 // أو مصدرها؛ o.created_at موجود بالفعل ضمن بيانات الطلب المجلوبة من Supabase)
@@ -1186,6 +1251,85 @@ function Customer({ profile, orders, drivers, refresh, flash, openAccount }) {
   };
   const ServiceTypeIcon = serviceType ? serviceTypeIcon[serviceType] : null;
 
+  // ===== صور المنتج لخدمة "اشتريهولي" فقط — واجهة + رفع اختياري =====
+  const [purchaseImages, setPurchaseImages] = useState([]); // [{ file, previewUrl }]
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
+  const purchaseFileInputRef = useRef(null);
+  const purchaseImagesRef = useRef(purchaseImages);
+
+  useEffect(() => {
+    purchaseImagesRef.current = purchaseImages;
+  }, [purchaseImages]);
+
+  useEffect(() => {
+    if (!show) {
+      purchaseImagesRef.current.forEach((img) => {
+        if (img.previewUrl) URL.revokeObjectURL(img.previewUrl);
+      });
+      setPurchaseImages([]);
+    }
+  }, [show]);
+
+  function handlePickPurchaseImages(e) {
+    const selected = Array.from(e.target.files || []).filter((f) =>
+      f.type.startsWith("image/"),
+    );
+
+    if (selected.length > 0) {
+      setPurchaseImages((current) => {
+        const room = Math.max(0, MAX_PURCHASE_IMAGES - current.length);
+
+        const accepted = selected.slice(0, room).map((file) => ({
+          file,
+          previewUrl: URL.createObjectURL(file),
+        }));
+
+        return [...current, ...accepted];
+      });
+    }
+
+    e.target.value = "";
+  }
+
+  function removePurchaseImage(index) {
+    setPurchaseImages((current) => {
+      const target = current[index];
+      if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl);
+      return current.filter((_, i) => i !== index);
+    });
+  }
+
+  async function uploadPurchaseImages(images) {
+    const folder = `${profile.id}/${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`;
+
+    const urls = [];
+
+    for (let i = 0; i < images.length; i++) {
+      const compressed = await compressImageFile(images[i].file);
+      const filePath = `${folder}/${i + 1}.jpg`;
+
+      const { error } = await supabase.storage
+        .from("order-images")
+        .upload(filePath, compressed, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: "image/jpeg",
+        });
+
+      if (error) throw error;
+
+      const { data } = supabase.storage
+        .from("order-images")
+        .getPublicUrl(filePath);
+
+      urls.push(data.publicUrl);
+    }
+
+    return urls;
+  }
+
   // نحتفظ بآخر نسخة من orders في ref عشان قناة الإشعارات (order-offers-realtime)
   // متعملش unsubscribe/subscribe من جديد في كل مرة orders بتتغيّر (ده كان بيوقف
   // الإشعارات فجأة أحيانًا بسبب تصادم في اشتراكات Supabase Realtime)
@@ -1437,6 +1581,27 @@ function Customer({ profile, orders, drivers, refresh, flash, openAccount }) {
         return;
       }
 
+      // رفع صور المنتج (اختياري) — لو مفيش صور، الطلب بيتبعت زي ما هو تمامًا
+      let productImageUrls = [];
+
+      if (purchaseImages.length > 0) {
+        setIsUploadingImages(true);
+
+        try {
+          productImageUrls = await uploadPurchaseImages(purchaseImages);
+        } catch (uploadError) {
+          console.error("PRODUCT IMAGES UPLOAD ERROR:", uploadError);
+
+          flash("تعذر رفع الصور، من فضلك حاول مرة أخرى");
+
+          setIsUploadingImages(false);
+
+          return;
+        }
+
+        setIsUploadingImages(false);
+      }
+
       payload = {
         ...payload,
 
@@ -1454,6 +1619,8 @@ function Customer({ profile, orders, drivers, refresh, flash, openAccount }) {
       */
 
         pickup_address: form.get("store"),
+
+        product_images: productImageUrls.length > 0 ? productImageUrls : null,
       };
     }
 
@@ -1581,6 +1748,11 @@ function Customer({ profile, orders, drivers, refresh, flash, openAccount }) {
         ? "تم إرسال طلب التوصيلة للمندوب"
         : "تم إرسال الطلب للمندوب",
     );
+
+    purchaseImages.forEach((img) => {
+      if (img.previewUrl) URL.revokeObjectURL(img.previewUrl);
+    });
+    setPurchaseImages([]);
 
     setShow(false);
 
@@ -2036,6 +2208,61 @@ function Customer({ profile, orders, drivers, refresh, flash, openAccount }) {
 
                   <section className="formSection">
                     <h3 className="formSectionTitle">
+                      <Camera /> إرفاق صور (اختياري)
+                    </h3>
+
+                    <div className="imageUploadArea">
+                      <input
+                        ref={purchaseFileInputRef}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="imageUploadInput"
+                        onChange={handlePickPurchaseImages}
+                      />
+
+                      {purchaseImages.length < MAX_PURCHASE_IMAGES && (
+                        <button
+                          type="button"
+                          className="imageUploadTrigger"
+                          onClick={() => purchaseFileInputRef.current?.click()}
+                        >
+                          <Camera />
+
+                          <span>اضغط لإضافة صور للمنتج (اختياري)</span>
+
+                          <small>
+                            {purchaseImages.length}/{MAX_PURCHASE_IMAGES} صور
+                          </small>
+                        </button>
+                      )}
+
+                      {purchaseImages.length > 0 && (
+                        <div className="imagePreviewGrid">
+                          {purchaseImages.map((img, index) => (
+                            <div className="imagePreviewItem" key={index}>
+                              <img
+                                src={img.previewUrl}
+                                alt={`صورة المنتج ${index + 1}`}
+                              />
+
+                              <button
+                                type="button"
+                                className="imagePreviewRemove"
+                                onClick={() => removePurchaseImage(index)}
+                                aria-label="حذف الصورة"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </section>
+
+                  <section className="formSection">
+                    <h3 className="formSectionTitle">
                       <MapPin /> موقع الاستلام
                     </h3>
 
@@ -2323,7 +2550,8 @@ function Customer({ profile, orders, drivers, refresh, flash, openAccount }) {
             >
               {isSubmittingOrder ? (
                 <>
-                  <Loader2 className="spinIcon" /> جاري الإرسال...
+                  <Loader2 className="spinIcon" />
+                  {isUploadingImages ? "جاري رفع الصور..." : "جاري الإرسال..."}
                 </>
               ) : (
                 "إرسال الطلب"
@@ -2914,6 +3142,9 @@ function OrderCard({
   // مفيش أي تأثير على البيانات أو الاستعلامات
   const [detailsOpen, setDetailsOpen] = useState(false);
 
+  // عرض صور المنتج بالحجم الكامل (اشتريهولي فقط) — واجهة عرض بحتة
+  const [lightboxImage, setLightboxImage] = useState(null);
+
   const [alreadyRated, setAlreadyRated] = useState(false);
 
   const total = Number(o.delivery_fee || 0) + Number(o.items_price || 0);
@@ -3256,6 +3487,27 @@ function OrderCard({
                 <ShoppingBag />
                 قيمة متوقعة: {money(o.estimated_items_price)}
               </p>
+            )}
+
+            {Array.isArray(o.product_images) && o.product_images.length > 0 && (
+              <div className="productImagesSection">
+                <span className="productImagesLabel">
+                  <Camera /> صور المنتج
+                </span>
+
+                <div className="productImagesGrid">
+                  {o.product_images.map((url, index) => (
+                    <button
+                      type="button"
+                      className="productImageThumb"
+                      key={index}
+                      onClick={() => setLightboxImage(url)}
+                    >
+                      <img src={url} alt={`صورة المنتج ${index + 1}`} />
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
           </>
         )}
@@ -3642,6 +3894,26 @@ function OrderCard({
         <div className="ratedMessage">
           <CheckCircle2 />
           تم إرسال تقييمك لهذا المشوار
+        </div>
+      )}
+
+      {lightboxImage && (
+        <div
+          className="imageLightboxOverlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setLightboxImage(null);
+          }}
+        >
+          <button
+            type="button"
+            className="imageLightboxClose"
+            onClick={() => setLightboxImage(null)}
+            aria-label="إغلاق"
+          >
+            ✕
+          </button>
+
+          <img src={lightboxImage} alt="صورة المنتج بالحجم الكامل" />
         </div>
       )}
     </article>
