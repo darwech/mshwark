@@ -50,16 +50,16 @@ public class MainActivity extends BridgeActivity {
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        AppState.setForeground(true);
-    }
+public void onResume() {
+    super.onResume();
+    AppState.setForeground(true);
+}
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-        AppState.setForeground(false);
-    }
+@Override
+public void onPause() {
+    super.onPause();
+    AppState.setForeground(false);
+}
 
     private void createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
