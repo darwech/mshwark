@@ -87,13 +87,17 @@ input, textarea, select {
   color: var(--ink);
   outline: none;
   font-size: 15px;
-  transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
+  transition: border-color .18s ease, background .18s ease, box-shadow .18s ease, transform .18s ease;
 }
 input::placeholder, textarea::placeholder { color: var(--ink-faint); }
 input:focus, textarea:focus, select:focus {
   border-color: var(--primary);
   background: var(--card);
   box-shadow: 0 0 0 4px var(--primary-tint);
+  transform: translateY(-1px);
+}
+@media (prefers-reduced-motion: reduce) {
+  input:focus, textarea:focus, select:focus { transform: none; }
 }
 textarea { min-height: 100px; resize: vertical; line-height: 1.6; }
 
@@ -162,6 +166,7 @@ header {
   display: flex; flex-direction: column; justify-content: center;
   background: linear-gradient(165deg, var(--primary-deep) 0%, var(--primary) 100%);
   color: white;
+  animation: authHeroFade .5s ease-out;
 }
 .authHero::after {
   content: "";
@@ -169,44 +174,216 @@ header {
   background: radial-gradient(circle, rgba(255, 107, 53, .16), transparent 70%);
   left: -90px; bottom: -120px;
 }
-.authHero .logo { color: white; margin-bottom: 46px; }
-.authHero .logo span { color: #A9C0DE; }
+.authHero .logo {
+  position: relative; z-index: 1;
+  color: white; margin-bottom: 46px;
+  display: flex; align-items: center; gap: 6px;
+}
+.authHero .logo span { color: var(--accent); }
+
+/* رسمة متحركة تمثل فكرة المشروع: مندوب بيتحرك على خط رحلة بين نقطة
+   استلام ونقطة توصيل، مع أيقونات عائمة للخدمات التانية (شراء / طرود) */
+.heroMotion {
+  position: absolute;
+  width: 250px; height: 210px;
+  top: 6px; inset-inline-end: -26px;
+  z-index: 0; opacity: .9; pointer-events: none;
+}
+.routeSvg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.routePath {
+  fill: none;
+  stroke: rgba(255, 255, 255, .3);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 5 9;
+  animation: routeFlow 2.6s linear infinite;
+}
+
+.routePin {
+  position: absolute; width: 22px; height: 22px; margin: -11px;
+  border-radius: 50%;
+}
+.routePinStart {
+  left: 18px; top: 190px;
+  background: var(--accent);
+  box-shadow: 0 0 0 6px rgba(255, 107, 53, .2);
+  animation: pinPulse 2.2s ease-in-out infinite;
+}
+.routePinStart::after {
+  content: ""; position: absolute; inset: 7px;
+  border-radius: 50%; background: white;
+}
+.routePinEnd {
+  left: 235px; top: 22px;
+  background: rgba(255, 255, 255, .12);
+  border: 1.5px solid rgba(255, 255, 255, .55);
+}
+
+.routeRider {
+  position: absolute; width: 32px; height: 32px; margin: -16px;
+  left: 18px; top: 190px;
+  border-radius: 50%;
+  background: var(--card); color: var(--primary);
+  display: grid; place-items: center;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, .28);
+  offset-path: path("M18,190 C70,175 55,110 110,95 C160,82 165,40 235,22");
+  animation: rideAlong 4.4s ease-in-out infinite;
+}
+
+.floatIcon {
+  position: absolute; width: 28px; height: 28px; margin: -14px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, .12);
+  backdrop-filter: blur(3px);
+  display: grid; place-items: center;
+  color: rgba(255, 255, 255, .9);
+  animation: floatIcon 3.6s ease-in-out infinite;
+}
+.floatIconBag { left: 65px; top: 138px; animation-delay: .3s; }
+.floatIconBox { left: 150px; top: 60px; animation-delay: 1.2s; }
+
+@keyframes routeFlow { to { stroke-dashoffset: -28; } }
+@keyframes pinPulse {
+  0%, 100% { box-shadow: 0 0 0 6px rgba(255, 107, 53, .2); }
+  50%      { box-shadow: 0 0 0 10px rgba(255, 107, 53, .05); }
+}
+@keyframes rideAlong {
+  0%, 100% { offset-distance: 0%; }
+  50%      { offset-distance: 100%; }
+}
+@keyframes floatIcon {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-7px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .routePath, .routePinStart, .routeRider, .floatIcon { animation: none; }
+}
+@media (max-width: 480px) {
+  .heroMotion { transform: scale(.82); top: -6px; inset-inline-end: -34px; }
+}
 .authHero h1 {
   position: relative; z-index: 1;
   font-size: clamp(32px, 3.8vw, 50px);
-  line-height: 1.28; font-weight: 700;
+  line-height: 1.26; font-weight: 800;
+  letter-spacing: -.015em;
   margin: 0 0 16px;
+  text-shadow: 0 2px 24px rgba(0, 0, 0, .12);
 }
 .authHero p {
   position: relative; z-index: 1;
   font-size: 16px; line-height: 1.85; max-width: 460px;
-  color: rgba(255, 255, 255, .78);
+  color: rgba(255, 255, 255, .82);
+  font-weight: 400;
 }
 
 .authCard {
   width: min(440px, 88%);
   margin: auto;
-  padding: 30px;
+  padding: 32px;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-pop);
-  display: flex; flex-direction: column; gap: 2px;
+  display: flex; flex-direction: column; gap: 10px;
+  animation: authCardRise .5s cubic-bezier(.22, 1, .36, 1) .08s both;
+}
+
+@keyframes authHeroFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes authCardRise {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .authHero, .authCard { animation: none; }
 }
 
 .seg {
+  position: relative;
   background: var(--bg);
   padding: 4px;
   border-radius: 14px;
   display: grid; grid-template-columns: 1fr 1fr;
-  margin-bottom: 18px;
+  margin-bottom: 6px;
+  isolation: isolate;
 }
+.seg::before {
+  content: "";
+  position: absolute;
+  top: 4px; bottom: 4px; right: 4px;
+  width: calc(50% - 4px);
+  border-radius: 11px;
+  background: var(--card);
+  box-shadow: var(--shadow-xs);
+  transition: transform .28s cubic-bezier(.22, 1, .36, 1);
+  z-index: 0;
+}
+/* الزر الأول (دخول) بياخد الجانب الأيمن افتراضيًا مع RTL؛ عند اختيار
+   "حساب جديد" بننقل الخلفية للجانب التاني بنفس عرضه بالظبط */
+.seg.segIsLogin::before    { transform: translateX(0); }
+.seg.segIsRegister::before { transform: translateX(calc(-100% - 8px)); }
 .seg button {
+  position: relative; z-index: 1;
   border: 0; padding: 12px; border-radius: 11px;
   background: transparent; font-weight: 700; color: var(--ink-soft);
-  transition: .15s ease;
+  transition: color .2s ease;
 }
-.seg button.active { background: var(--card); color: var(--primary); box-shadow: var(--shadow-xs); }
+.seg button.active { color: var(--primary); }
+@media (prefers-reduced-motion: reduce) { .seg::before { transition: none; } }
+
+.fieldIcon { position: relative; }
+.fieldIcon svg {
+  position: absolute; top: 50%; right: 15px; transform: translateY(-50%);
+  color: var(--ink-faint); pointer-events: none;
+  transition: color .2s ease;
+}
+.fieldIcon input { padding-right: 44px; margin-bottom: 0; }
+.fieldIcon input.hasTrailingIcon { padding-left: 42px; }
+.fieldIcon:focus-within svg { color: var(--primary); }
+
+.fieldTrailingButton {
+  position: absolute; top: 50%; left: 6px; transform: translateY(-50%);
+  width: 32px; height: 32px; border: 0; border-radius: 8px;
+  background: transparent; color: var(--ink-faint);
+  display: grid; place-items: center;
+  transition: color .15s ease, background .15s ease;
+}
+.fieldTrailingButton:hover { background: var(--bg); color: var(--ink-soft); }
+.fieldTrailingButton:active { transform: translateY(-50%) scale(.9); }
+
+/* اهتزاز خفيف للحقل لما يبقى فاضي وييجي يبعت الفورم */
+.shakeField { animation: fieldShake .38s ease; }
+@keyframes fieldShake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-6px); }
+  40%      { transform: translateX(5px); }
+  60%      { transform: translateX(-4px); }
+  80%      { transform: translateX(3px); }
+}
+
+.authErrorEnter { animation: authErrorSlide .3s ease-out; }
+@keyframes authErrorSlide {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shakeField, .authErrorEnter { animation: none; }
+}
+
+/* توهيج نقطة الانطلاق في رسمة الهيرو لما المستخدم يركّز على أي حقل،
+   لربط الرسمة بصريًا بفعل تسجيل الدخول نفسه */
+.heroMotion.pinGlow .routePinStart {
+  box-shadow: 0 0 0 6px rgba(255, 107, 53, .35), 0 0 18px 4px rgba(255, 107, 53, .5);
+  transition: box-shadow .25s ease;
+}
+
+/* دوران أيقونة التحميل جوه زرار الدخول */
+.primary .spin { animation: spinIcon .8s linear infinite; }
+@keyframes spinIcon { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .primary .spin { animation-duration: 1.6s; } }
 
 .roles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 6px; }
 .roles button {
@@ -254,11 +431,13 @@ header {
 .primary {
   position: relative; overflow: hidden;
   width: 100%; color: white;
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
   box-shadow: 0 8px 20px rgba(255, 107, 53, .28);
   margin-top: 18px;
+  transition: transform .12s ease, box-shadow .2s ease, filter .15s ease;
 }
-.primary:hover { background: var(--accent-deep); }
+.primary:hover { filter: brightness(1.04); box-shadow: 0 10px 24px rgba(255, 107, 53, .34); }
+.primary:active { transform: scale(.96); box-shadow: 0 4px 12px rgba(255, 107, 53, .26); }
 .primary::after {
   content: "";
   position: absolute; top: 0; bottom: 0; width: 55%;
@@ -1204,10 +1383,11 @@ body.keyboard-open .modal { margin-top: 6px; }
 @media (max-width: 900px) {
   .auth { grid-template-columns: 1fr; }
 
-  .authHero { padding: 42px 24px 28px; min-height: 260px; }
-  .authHero .logo { margin-bottom: 26px; }
-  .authHero h1 { font-size: 30px; }
-  .authCard { width: calc(100% - 24px); margin: -8px auto 24px; padding: 22px; }
+  .authHero { padding: 34px 24px 46px; min-height: 200px; }
+  .authHero .logo { margin-bottom: 18px; }
+  .authHero h1 { font-size: 28px; }
+  .authHero p { font-size: 14.5px; }
+  .authCard { width: calc(100% - 24px); margin: -32px auto 24px; padding: 22px; }
 
   /* الخدمات بتفضل شبكة 3 أعمدة ثابتة حتى على الموبايل (بدل Scroll أفقي)
      عشان تظهر الخدمات الثلاثة كاملة بمجرد فتح التطبيق */

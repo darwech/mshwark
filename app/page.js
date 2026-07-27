@@ -37,6 +37,11 @@ import {
   MessageSquare,
   Loader2,
   Camera,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  HelpCircle,
 } from "lucide-react";
 
 const statusText = {
@@ -553,6 +558,8 @@ function Auth({ flash }) {
 
   const [busy, setBusy] = useState(false);
   const [authError, setAuthError] = useState("");
+  const [showPassword, setShowPassword] = useState(false); // تحكم بصري فقط في إظهار/إخفاء كلمة المرور
+  const heroMotionRef = useRef(null); // إشارة بصرية فقط لتوهيج نقطة الانطلاق في الرسمة عند التركيز على الحقول
 
   const [cardFront, setCardFront] = useState(null);
 
@@ -729,6 +736,30 @@ function Auth({ flash }) {
   return (
     <main className="auth">
       <section className="authHero">
+        <div className="heroMotion" aria-hidden="true" ref={heroMotionRef}>
+          <svg className="routeSvg" viewBox="0 0 260 220">
+            <path
+              className="routePath"
+              d="M18,190 C70,175 55,110 110,95 C160,82 165,40 235,22"
+            />
+          </svg>
+
+          <span className="routePin routePinStart" />
+          <span className="routePin routePinEnd" />
+
+          <div className="routeRider">
+            <Bike size={18} />
+          </div>
+
+          <div className="floatIcon floatIconBag">
+            <ShoppingBag size={15} />
+          </div>
+
+          <div className="floatIcon floatIconBox">
+            <Package size={14} />
+          </div>
+        </div>
+
         <div className="logo">
           مشوارك
           <span>●</span>
@@ -744,7 +775,7 @@ function Auth({ flash }) {
       </section>
 
       <form className="authCard" onSubmit={submit}>
-        <div className="seg">
+        <div className={`seg seg2 ${mode === "register" ? "segIsRegister" : "segIsLogin"}`}>
           <button
             type="button"
             className={mode === "login" ? "active" : ""}
@@ -856,25 +887,61 @@ function Auth({ flash }) {
           </>
         )}
 
-        <input
-          name="email"
-          type="email"
-          required
-          placeholder="البريد الإلكتروني"
-        />
+        <div className="fieldIcon">
+          <Mail size={18} />
+          <input
+            name="email"
+            type="email"
+            required
+            placeholder="البريد الإلكتروني"
+            onFocus={() => heroMotionRef.current?.classList.add("pinGlow")}
+            onBlur={() => heroMotionRef.current?.classList.remove("pinGlow")}
+            onInvalid={(e) => {
+              const el = e.currentTarget;
+              el.classList.remove("shakeField");
+              // إعادة تشغيل الحركة حتى لو الكلاس كان متحطوط قبل كده
+              void el.offsetWidth;
+              el.classList.add("shakeField");
+            }}
+            onAnimationEnd={(e) => e.currentTarget.classList.remove("shakeField")}
+          />
+        </div>
 
-        <input
-          name="password"
-          type="password"
-          minLength={6}
-          required
-          placeholder="كلمة المرور"
-        />
+        <div className="fieldIcon">
+          <Lock size={18} />
+          <input
+            name="password"
+            type={showPassword ? "text" : "password"}
+            minLength={6}
+            required
+            placeholder="كلمة المرور"
+            className="hasTrailingIcon"
+            onFocus={() => heroMotionRef.current?.classList.add("pinGlow")}
+            onBlur={() => heroMotionRef.current?.classList.remove("pinGlow")}
+            onInvalid={(e) => {
+              const el = e.currentTarget;
+              el.classList.remove("shakeField");
+              void el.offsetWidth;
+              el.classList.add("shakeField");
+            }}
+            onAnimationEnd={(e) => e.currentTarget.classList.remove("shakeField")}
+          />
+          <button
+            type="button"
+            className="fieldTrailingButton"
+            tabIndex={-1}
+            aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
+            onClick={() => setShowPassword((v) => !v)}
+          >
+            {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+          </button>
+        </div>
         {mode === "login" && authError && (
-          <div className="authError">{authError}</div>
+          <div className="authError authErrorEnter">{authError}</div>
         )}
 
         <button className="primary" disabled={busy}>
+          {busy && <Loader2 className="spin" size={18} />}
           {busy
             ? "جاري التنفيذ..."
             : mode === "login"
@@ -909,6 +976,7 @@ function Auth({ flash }) {
               );
             }}
           >
+            <HelpCircle size={14} />
             نسيت كلمة المرور؟
           </button>
         )}
