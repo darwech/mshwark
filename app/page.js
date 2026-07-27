@@ -89,6 +89,19 @@ const serviceInfo = {
   },
 };
 
+// أنواع المركبات: القيمة (value) تتخزن في قاعدة البيانات بالإنجليزية،
+// والتسمية (label) هي اللي تتعرض للمستخدم بالعربية. مركزينها هنا في
+// مكان واحد عشان تتستخدم في شاشة تسجيل المندوب وشاشة إنشاء الطلب
+// من غير تكرار أو اختلاف بين الاتنين.
+const VEHICLE_TYPES = [
+  { value: "motorcycle", label: "موتوسيكل", emoji: "🛵" },
+  { value: "car", label: "سيارة", emoji: "🚗" },
+  { value: "tricycle", label: "تروسيكل", emoji: "🛺" },
+];
+
+const vehicleTypeLabel = (value) =>
+  VEHICLE_TYPES.find((v) => v.value === value)?.label || null;
+
 const money = (value) => `${Number(value || 0).toLocaleString("ar-EG")} ج`;
 
 // ضغط الصورة قبل الرفع (Canvas) — تصغير الأبعاد الكبيرة وتحويلها لـ JPEG بجودة
@@ -284,9 +297,18 @@ function HomeInner() {
     }
 
     if (currentProfile?.role === "driver") {
-      query = query.or(
-        `and(status.eq.requested,driver_id.is.null),driver_id.eq.${session.user.id}`,
-      );
+      // المندوب يشوف بس الطلبات المتاحة (requested + بدون مندوب) اللي نوع
+      // مركبتها بيطابق نوع مركبته، بالإضافة لأي طلب اتخصص له هو بالفعل
+      // (بغض النظر عن نوع المركبة، عشان طلباته الحالية/السابقة تفضل ظاهرة له)
+      const driverVehicleType = currentProfile?.vehicle_type;
+
+      query = driverVehicleType
+        ? query.or(
+            `and(status.eq.requested,driver_id.is.null,vehicle_type.eq.${driverVehicleType}),driver_id.eq.${session.user.id}`,
+          )
+        : query.or(
+            `and(status.eq.requested,driver_id.is.null),driver_id.eq.${session.user.id}`,
+          );
     }
 
     const { data: orderData, error: orderError } = await query.order(
@@ -556,6 +578,8 @@ function Auth({ flash }) {
 
   const [role, setRole] = useState("customer");
 
+  const [vehicleType, setVehicleType] = useState(""); // نوع مركبة المندوب - إلزامي عند role === "driver"
+
   const [busy, setBusy] = useState(false);
   const [authError, setAuthError] = useState("");
   const [showPassword, setShowPassword] = useState(false); // تحكم بصري فقط في إظهار/إخفاء كلمة المرور
@@ -651,6 +675,10 @@ function Auth({ flash }) {
         return;
       }
 
+      if (role === "driver" && !vehicleType) {
+        throw new Error("لازم تختار نوع مركبتك أولاً");
+      }
+
       if (role === "driver" && (!driverAvatar || !cardFront || !cardBack)) {
         throw new Error(
           "لازم ترفع صورتك الشخصية وصورة البطاقة من الأمام والخلف",
@@ -664,7 +692,7 @@ function Auth({ flash }) {
 
         role,
 
-        vehicle_type: role === "driver" ? form.get("vehicle") : null,
+        vehicle_type: role === "driver" ? vehicleType : null,
 
         vehicle_plate: role === "driver" ? form.get("vehiclePlate") : null,
 
@@ -823,11 +851,27 @@ function Auth({ flash }) {
 
             {role === "driver" && (
               <>
-                <input
-                  name="vehicle"
-                  required
-                  placeholder="نوع وسيلة النقل - مثال: موتوسيكل / سيارة"
-                />
+                <label>نوع المركبة</label>
+
+                <div className="roles vehicleTypeRoles">
+                  {VEHICLE_TYPES.map((v) => (
+                    <button
+                      key={v.value}
+                      type="button"
+                      className={vehicleType === v.value ? "chosen" : ""}
+                      onClick={() => setVehicleType(v.value)}
+                    >
+                      <span aria-hidden="true">{v.emoji}</span>
+                      {v.label}
+                    </button>
+                  ))}
+                </div>
+
+                {!vehicleType && (
+                  <small className="privacyNote">
+                    من فضلك اختر نوع المركبة قبل إنشاء الحساب
+                  </small>
+                )}
 
                 <input name="vehiclePlate" placeholder="رقم اللوحة - إن وجد" />
 
@@ -1299,6 +1343,7 @@ function Customer({ profile, orders, drivers, refresh, flash, openAccount }) {
   const [activeTab, setActiveTab] = useState("home"); // تبويب الشريط السفلي - عرض فقط، بدون أي تأثير على البيانات
 
   const [serviceType, setServiceType] = useState(null);
+  const [orderVehicleType, setOrderVehicleType] = useState(""); // نوع المركبة المطلوبة للطلب - إلزامي
   const [orderOffers, setOrderOffers] = useState([]);
 
   // ===== حالات واجهة فقط لفورم إنشاء الطلب (لا تؤثر على أي Query/API) =====
@@ -1593,6 +1638,7 @@ function Customer({ profile, orders, drivers, refresh, flash, openAccount }) {
 
   function openService(type) {
     setServiceType(type);
+    setOrderVehicleType("");
     setShow(true);
   }
 
@@ -1610,6 +1656,11 @@ function Customer({ profile, orders, drivers, refresh, flash, openAccount }) {
   }
 
   async function submitOrder(e) {
+    if (!orderVehicleType) {
+      flash("من فضلك اختر نوع المركبة المطلوبة أولاً");
+      return;
+    }
+
     const form = new FormData(e.currentTarget);
 
     /* =========================================
@@ -1627,6 +1678,9 @@ function Customer({ profile, orders, drivers, refresh, flash, openAccount }) {
       notes: form.get("notes") || null,
 
       service_type: serviceType,
+
+      // نوع المركبة اللي اختارها العميل لهذا الطلب
+      vehicle_type: orderVehicleType,
 
       status: "requested",
 
@@ -1795,6 +1849,7 @@ function Customer({ profile, orders, drivers, refresh, flash, openAccount }) {
               message: `يوجد طلب جديد متاح، افتح مشوارك لمشاهدة التفاصيل وتقديم عرضك.${suggestedPriceText}`,
               url: "/",
               serviceType,
+              vehicleType: orderVehicleType,
             }),
           });
 
@@ -2021,6 +2076,7 @@ function Customer({ profile, orders, drivers, refresh, flash, openAccount }) {
               message: `العميل اقترح سعر ${Number(val)} جنيه على طلب متاح، افتح مشوارك لمشاهدة التفاصيل.`,
               url: "/",
               serviceType: orderInfo?.service_type || null,
+              vehicleType: orderInfo?.vehicle_type || null,
             }),
           });
         }
@@ -2237,6 +2293,32 @@ function Customer({ profile, orders, drivers, refresh, flash, openAccount }) {
             </div>
 
             <div className="orderFormBody">
+              <section className="formSection">
+                <h3 className="formSectionTitle">
+                  <Bike /> نوع المركبة المطلوبة
+                </h3>
+
+                <div className="roles vehicleTypeRoles">
+                  {VEHICLE_TYPES.map((v) => (
+                    <button
+                      key={v.value}
+                      type="button"
+                      className={orderVehicleType === v.value ? "chosen" : ""}
+                      onClick={() => setOrderVehicleType(v.value)}
+                    >
+                      <span aria-hidden="true">{v.emoji}</span>
+                      {v.label}
+                    </button>
+                  ))}
+                </div>
+
+                {!orderVehicleType && (
+                  <span className="fieldError" style={{ display: "block" }}>
+                    من فضلك اختر نوع المركبة المطلوبة
+                  </span>
+                )}
+              </section>
+
               {serviceType === "purchase" && (
                 <>
                   <section className="formSection">
@@ -2613,7 +2695,8 @@ function Customer({ profile, orders, drivers, refresh, flash, openAccount }) {
               disabled={
                 availableDrivers.length === 0 ||
                 isSubmittingOrder ||
-                !isOrderFormValid
+                !isOrderFormValid ||
+                !orderVehicleType
               }
             >
               {isSubmittingOrder ? (
@@ -2731,6 +2814,14 @@ function Driver({ profile, orders, refresh, flash, openAccount }) {
             return;
 
           if (newOrder?.service_type === "ride" && profile?.can_ride === false)
+            return;
+
+          // نتأكد أن نوع المركبة المطلوبة للطلب يطابق نوع مركبة المندوب
+          if (
+            newOrder?.vehicle_type &&
+            profile?.vehicle_type &&
+            newOrder.vehicle_type !== profile.vehicle_type
+          )
             return;
 
           // مبنعملش new Notification() هنا: السيرفر أصلًا بيبعت Push حقيقي
@@ -3678,7 +3769,8 @@ function OrderCard({
                 <div>
                   <Car />
                   <span>
-                    {o.driver.vehicle_type}
+                    {vehicleTypeLabel(o.driver.vehicle_type) ||
+                      o.driver.vehicle_type}
                     {o.driver.vehicle_plate
                       ? ` — ${o.driver.vehicle_plate}`
                       : ""}
@@ -3820,7 +3912,10 @@ function OrderCard({
                     <strong>{offerDriver?.full_name || "مندوب"}</strong>
 
                     <span>
-                      🚗 {offerDriver?.vehicle_type || "وسيلة غير محددة"}
+                      🚗{" "}
+                      {vehicleTypeLabel(offerDriver?.vehicle_type) ||
+                        offerDriver?.vehicle_type ||
+                        "وسيلة غير محددة"}
                     </span>
 
                     <span className="offerRating">
@@ -4205,7 +4300,10 @@ function Admin({ logout, flash }) {
                   <small>📞 {driver.phone || "غير مسجل"}</small>
 
                   <small>
-                    🚗 {driver.vehicle_type || "وسيلة النقل غير مسجلة"}
+                    🚗{" "}
+                    {vehicleTypeLabel(driver.vehicle_type) ||
+                      driver.vehicle_type ||
+                      "وسيلة النقل غير مسجلة"}
                   </small>
 
                   {driver.vehicle_plate && (
@@ -4323,7 +4421,9 @@ function Admin({ logout, flash }) {
                   <h3>{driver.full_name}</h3>
 
                   <p>
-                    {driver.vehicle_type || "وسيلة غير محددة"}
+                    {vehicleTypeLabel(driver.vehicle_type) ||
+                      driver.vehicle_type ||
+                      "وسيلة غير محددة"}
 
                     {driver.vehicle_plate ? ` — ${driver.vehicle_plate}` : ""}
                   </p>

@@ -42,6 +42,7 @@ export async function POST(request) {
       message = "يوجد طلب جديد متاح",
       url = "/",
       serviceType = null,
+      vehicleType = null,
     } = body;
 
     // 4) جلب المندوبين المتاحين واللي بيقدروا يخدموا نوع الطلب ده
@@ -57,6 +58,15 @@ export async function POST(request) {
       driversQuery = driversQuery.not("can_delivery", "is", false);
     } else if (serviceType === "ride") {
       driversQuery = driversQuery.not("can_ride", "is", false);
+    }
+
+    // فلترة إضافية حسب نوع المركبة المطلوبة للطلب: لو الطلب محدد له نوع
+    // مركبة (motorcycle/car/tricycle)، الإشعار يوصل بس للمناديب اللي نوع
+    // مركبتهم مطابق. لو vehicleType مش موجودة (null) — مثلاً طلب قديم من
+    // قبل إضافة الميزة دي — منعملش أي فلترة إضافية، والسلوك القديم يفضل
+    // شغال زي ما هو (يوصل لكل المناديب المتاحين حسب نوع الخدمة بس).
+    if (vehicleType) {
+      driversQuery = driversQuery.eq("vehicle_type", vehicleType);
     }
 
     const { data: drivers, error: driversError } = await driversQuery;
