@@ -1661,19 +1661,26 @@ body.keyboard-open .modal { margin-top: 6px; }
 @media (prefers-reduced-motion: reduce) {
   .bottomNavItem, .bottomNavItem svg { transition: none; }
 }
-/* Disable text selection */
+/* Disable text selection + native long-press menu (Copy/Select all/Share)
+   في كل حاجة في التطبيق، وبقوة (!important) عشان تغلب أي كلاس تاني
+   بيحدد user-select قبل كده في الملف (زي .detailsToggle أو button) */
 * {
-  -webkit-user-select: none;
-  user-select: none;
-  -webkit-touch-callout: none;
-  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-tap-highlight-color: transparent !important;
 }
 
-/* Keep inputs editable */
+/* استثناء واحد بس: الحقول (input/textarea/contenteditable)
+   عشان اللصق والتحديد فيها يفضل شغال عادي */
 input,
 textarea,
 [contenteditable="true"] {
-  -webkit-user-select: text;
-  user-select: text;
-  -webkit-touch-callout: default;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  user-select: text !important;
+  -webkit-touch-callout: default !important;
 }
