@@ -15,10 +15,6 @@ export const metadata = {
   },
 };
 
-export const viewport = {
-  themeColor: "#0B2050", // كان #000000 — اتغيّر عشان يطابق لون البراند الجديد
-};
-
 export default function RootLayout({ children }) {
   return (
     <html lang="ar" dir="rtl">
