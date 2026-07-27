@@ -32,6 +32,10 @@ import {
   Clock,
   ChevronDown,
   ChevronUp,
+  Flag,
+  Wallet,
+  MessageSquare,
+  Loader2,
 } from "lucide-react";
 
 const statusText = {
@@ -1164,6 +1168,24 @@ function Customer({ profile, orders, drivers, refresh, flash, openAccount }) {
   const [serviceType, setServiceType] = useState(null);
   const [orderOffers, setOrderOffers] = useState([]);
 
+  // ===== حالات واجهة فقط لفورم إنشاء الطلب (لا تؤثر على أي Query/API) =====
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const [isOrderFormValid, setIsOrderFormValid] = useState(true);
+  const orderFormRef = useRef(null);
+
+  function refreshOrderFormValidity() {
+    if (orderFormRef.current) {
+      setIsOrderFormValid(orderFormRef.current.checkValidity());
+    }
+  }
+
+  const serviceTypeIcon = {
+    purchase: ShoppingBag,
+    delivery: Package,
+    ride: Car,
+  };
+  const ServiceTypeIcon = serviceType ? serviceTypeIcon[serviceType] : null;
+
   // نحتفظ بآخر نسخة من orders في ref عشان قناة الإشعارات (order-offers-realtime)
   // متعملش unsubscribe/subscribe من جديد في كل مرة orders بتتغيّر (ده كان بيوقف
   // الإشعارات فجأة أحيانًا بسبب تصادم في اشتراكات Supabase Realtime)
@@ -1172,6 +1194,14 @@ function Customer({ profile, orders, drivers, refresh, flash, openAccount }) {
   useEffect(() => {
     ordersRef.current = orders;
   }, [orders]);
+
+  useEffect(() => {
+    if (!show) return;
+
+    // تأخير بسيط لضمان اكتمال الرندر قبل قراءة صلاحية الفورم (واجهة فقط)
+    const t = setTimeout(refreshOrderFormValidity, 0);
+    return () => clearTimeout(t);
+  }, [show, serviceType]);
 
   useEffect(() => {
     if (!show) return;
@@ -1357,6 +1387,17 @@ function Customer({ profile, orders, drivers, refresh, flash, openAccount }) {
   async function createOrder(e) {
     e.preventDefault();
 
+    if (isSubmittingOrder) return;
+    setIsSubmittingOrder(true);
+
+    try {
+      await submitOrder(e);
+    } finally {
+      setIsSubmittingOrder(false);
+    }
+  }
+
+  async function submitOrder(e) {
     const form = new FormData(e.currentTarget);
 
     /* =========================================
@@ -1925,179 +1966,368 @@ function Customer({ profile, orders, drivers, refresh, flash, openAccount }) {
             }
           }}
         >
-          <form className="modal" onSubmit={createOrder}>
-            <h2>
-              {serviceInfo[serviceType]?.emoji}{" "}
-              {serviceInfo[serviceType]?.title}
-            </h2>
+          <form
+            className="modal orderModal"
+            onSubmit={createOrder}
+            ref={orderFormRef}
+            onInput={refreshOrderFormValidity}
+            onChange={refreshOrderFormValidity}
+          >
+            <button
+              type="button"
+              className="close"
+              onClick={() => setShow(false)}
+              aria-label="إغلاق"
+            >
+              ✕
+            </button>
 
-            <p>{serviceInfo[serviceType]?.description}</p>
+            <div className="orderModalHeader">
+              {ServiceTypeIcon && (
+                <span className="orderModalHeaderIcon">
+                  <ServiceTypeIcon />
+                </span>
+              )}
 
-            {serviceType === "purchase" && (
-              <>
-                <label>محتاج إيه؟</label>
+              <div>
+                <h2>{serviceInfo[serviceType]?.title}</h2>
 
-                <textarea
-                  name="items"
-                  required
-                  placeholder="اكتب المنتجات والكميات بالتفصيل"
-                />
+                <p>{serviceInfo[serviceType]?.description}</p>
+              </div>
+            </div>
 
-                <label>منين؟</label>
+            <div className="orderFormBody">
+              {serviceType === "purchase" && (
+                <>
+                  <section className="formSection">
+                    <h3 className="formSectionTitle">
+                      <FileText /> معلومات الطلب
+                    </h3>
 
-                <input
-                  name="store"
-                  required
-                  placeholder="اسم المحل / المطعم / الصيدلية"
-                />
+                    <div className="formField">
+                      <label>محتاج إيه؟</label>
 
-                <label>عنوان التوصيل</label>
+                      <textarea
+                        name="items"
+                        required
+                        placeholder="اكتب المنتجات والكميات بالتفصيل"
+                      />
 
-                <input name="address" required placeholder="العنوان بالتفصيل" />
+                      <span className="fieldError">
+                        من فضلك اكتب المنتجات المطلوبة
+                      </span>
+                    </div>
 
-                <label>القيمة المتوقعة للمشتريات</label>
+                    <div className="formField">
+                      <label>القيمة المتوقعة للمشتريات</label>
 
-                <input
-                  name="estimatedPrice"
-                  type="tel"
-                  inputMode="numeric"
-                  min="0"
-                  required
-                  placeholder={`حد حسابك ${profile.purchase_limit || 500} جنيه`}
-                />
-              </>
-            )}
+                      <input
+                        name="estimatedPrice"
+                        type="tel"
+                        inputMode="numeric"
+                        min="0"
+                        required
+                        placeholder={`حد حسابك ${profile.purchase_limit || 500} جنيه`}
+                      />
 
-            {serviceType === "delivery" && (
-              <>
-                <label>عنوان الاستلام</label>
+                      <span className="fieldError">أدخل قيمة صحيحة</span>
+                    </div>
+                  </section>
 
-                <input
-                  name="pickupAddress"
-                  required
-                  placeholder="المكان اللي المندوب هيستلم منه"
-                />
+                  <section className="formSection">
+                    <h3 className="formSectionTitle">
+                      <MapPin /> موقع الاستلام
+                    </h3>
 
-                <label>عنوان التوصيل</label>
+                    <div className="formField">
+                      <label>منين؟</label>
 
-                <input
-                  name="address"
-                  required
-                  placeholder="المكان اللي الحاجة هتتسلم فيه"
-                />
+                      <input
+                        name="store"
+                        required
+                        placeholder="اسم المحل / المطعم / الصيدلية"
+                      />
 
-                <label>إيه الحاجة اللي هتتوصل؟</label>
+                      <span className="fieldError">
+                        من فضلك حدد اسم المحل
+                      </span>
+                    </div>
+                  </section>
 
-                <textarea
-                  name="packageDescription"
-                  required
-                  placeholder="مثال: شنطة، أوراق، كرتونة..."
-                />
+                  <section className="formSection">
+                    <h3 className="formSectionTitle">
+                      <Flag /> موقع التسليم
+                    </h3>
 
-                <label>اسم المستلم</label>
+                    <div className="formField">
+                      <label>عنوان التوصيل</label>
 
-                <input
-                  name="recipientName"
-                  required
-                  placeholder="اسم الشخص المستلم"
-                />
+                      <input
+                        name="address"
+                        required
+                        placeholder="العنوان بالتفصيل"
+                      />
 
-                <label>رقم المستلم</label>
+                      <span className="fieldError">
+                        من فضلك اكتب عنوان التوصيل
+                      </span>
+                    </div>
+                  </section>
+                </>
+              )}
 
-                <input
-                  name="recipientPhone"
-                  type="tel"
-                  inputMode="numeric"
-                  required
-                  placeholder="رقم هاتف المستلم"
-                />
-              </>
-            )}
+              {serviceType === "delivery" && (
+                <>
+                  <section className="formSection">
+                    <h3 className="formSectionTitle">
+                      <FileText /> معلومات الطلب
+                    </h3>
 
-            {serviceType === "ride" && (
-              <>
-                <div className="rideNotice">
-                  <Car />
+                    <div className="formField">
+                      <label>إيه الحاجة اللي هتتوصل؟</label>
+
+                      <textarea
+                        name="packageDescription"
+                        required
+                        placeholder="مثال: شنطة، أوراق، كرتونة..."
+                      />
+
+                      <span className="fieldError">
+                        من فضلك اكتب وصف الحاجة
+                      </span>
+                    </div>
+                  </section>
+
+                  <section className="formSection">
+                    <h3 className="formSectionTitle">
+                      <MapPin /> موقع الاستلام
+                    </h3>
+
+                    <div className="formField">
+                      <label>عنوان الاستلام</label>
+
+                      <input
+                        name="pickupAddress"
+                        required
+                        placeholder="المكان اللي المندوب هيستلم منه"
+                      />
+
+                      <span className="fieldError">
+                        من فضلك اكتب عنوان الاستلام
+                      </span>
+                    </div>
+                  </section>
+
+                  <section className="formSection">
+                    <h3 className="formSectionTitle">
+                      <Flag /> موقع التسليم
+                    </h3>
+
+                    <div className="formField">
+                      <label>عنوان التوصيل</label>
+
+                      <input
+                        name="address"
+                        required
+                        placeholder="المكان اللي الحاجة هتتسلم فيه"
+                      />
+
+                      <span className="fieldError">
+                        من فضلك اكتب عنوان التسليم
+                      </span>
+                    </div>
+
+                    <div className="formField">
+                      <label>اسم المستلم</label>
+
+                      <input
+                        name="recipientName"
+                        required
+                        placeholder="اسم الشخص المستلم"
+                      />
+
+                      <span className="fieldError">
+                        من فضلك اكتب اسم المستلم
+                      </span>
+                    </div>
+
+                    <div className="formField">
+                      <label>رقم المستلم</label>
+
+                      <input
+                        name="recipientPhone"
+                        type="tel"
+                        inputMode="numeric"
+                        required
+                        placeholder="رقم هاتف المستلم"
+                      />
+
+                      <span className="fieldError">
+                        من فضلك اكتب رقم هاتف المستلم
+                      </span>
+                    </div>
+                  </section>
+                </>
+              )}
+
+              {serviceType === "ride" && (
+                <>
+                  <div className="rideNotice">
+                    <Car />
+
+                    <div>
+                      <b>توصيلة أشخاص</b>
+
+                      <span>
+                        سيظهر لك فقط المندوبون المفعّل لهم نقل الركاب.
+                      </span>
+                    </div>
+                  </div>
+
+                  <section className="formSection">
+                    <h3 className="formSectionTitle">
+                      <FileText /> معلومات الطلب
+                    </h3>
+
+                    <div className="formField">
+                      <label>عدد الركاب</label>
+
+                      <input
+                        name="passengers"
+                        type="tel"
+                        inputMode="numeric"
+                        min="1"
+                        max="8"
+                        defaultValue="1"
+                        required
+                      />
+
+                      <span className="fieldError">
+                        أدخل عدد ركاب صحيح
+                      </span>
+                    </div>
+                  </section>
+
+                  <section className="formSection">
+                    <h3 className="formSectionTitle">
+                      <MapPin /> موقع الاستلام
+                    </h3>
+
+                    <div className="formField">
+                      <label>هتركب منين؟</label>
+
+                      <input
+                        name="ridePickup"
+                        required
+                        placeholder="نقطة الركوب بالتفصيل"
+                      />
+
+                      <span className="fieldError">
+                        من فضلك حدد نقطة الركوب
+                      </span>
+                    </div>
+                  </section>
+
+                  <section className="formSection">
+                    <h3 className="formSectionTitle">
+                      <Flag /> موقع التسليم
+                    </h3>
+
+                    <div className="formField">
+                      <label>رايح فين؟</label>
+
+                      <input
+                        name="rideDestination"
+                        required
+                        placeholder="الوجهة بالتفصيل"
+                      />
+
+                      <span className="fieldError">
+                        من فضلك حدد الوجهة
+                      </span>
+                    </div>
+                  </section>
+                </>
+              )}
+
+              <section className="formSection">
+                <h3 className="formSectionTitle">
+                  <Wallet /> السعر
+                </h3>
+
+                <div className="formField">
+                  <label>عايز تقترح سعر للمشوار؟ (اختياري)</label>
+
+                  <input
+                    name="customerOfferPrice"
+                    type="tel"
+                    inputMode="numeric"
+                    min="0"
+                    step="0.5"
+                    placeholder="مثلاً 40 جنيه — سيبها فاضية لو مش عارف تحدد"
+                  />
+                </div>
+              </section>
+
+              <section className="formSection">
+                <h3 className="formSectionTitle">
+                  <MessageSquare /> تفاصيل إضافية
+                </h3>
+
+                <div className="formField">
+                  <label>رقم التواصل</label>
+
+                  <input
+                    name="phone"
+                    type="tel"
+                    inputMode="numeric"
+                    required
+                    defaultValue={profile.phone || ""}
+                  />
+
+                  <span className="fieldError">
+                    من فضلك اكتب رقم تواصل صحيح
+                  </span>
+                </div>
+
+                <div className="formField">
+                  <label>ملاحظات</label>
+
+                  <input
+                    name="notes"
+                    placeholder="أي تفاصيل إضافية - اختياري"
+                  />
+                </div>
+              </section>
+
+              {availableDrivers.length === 0 && (
+                <div className="riskWarning">
+                  <AlertTriangle />
 
                   <div>
-                    <b>توصيلة أشخاص</b>
+                    <b>لا يوجد مندوب متاح لهذه الخدمة حاليًا</b>
 
-                    <span>سيظهر لك فقط المندوبون المفعّل لهم نقل الركاب.</span>
+                    <span>جرّب مرة أخرى عندما يتوفر مندوب مناسب.</span>
                   </div>
                 </div>
-
-                <label>هتركب منين؟</label>
-
-                <input
-                  name="ridePickup"
-                  required
-                  placeholder="نقطة الركوب بالتفصيل"
-                />
-
-                <label>رايح فين؟</label>
-
-                <input
-                  name="rideDestination"
-                  required
-                  placeholder="الوجهة بالتفصيل"
-                />
-
-                <label>عدد الركاب</label>
-
-                <input
-                  name="passengers"
-                  type="tel"
-                  inputMode="numeric"
-                  min="1"
-                  max="8"
-                  defaultValue="1"
-                  required
-                />
-              </>
-            )}
-
-            <label>عايز تقترح سعر للمشوار؟ (اختياري)</label>
-
-            <input
-              name="customerOfferPrice"
-              type="tel"
-              inputMode="numeric"
-              min="0"
-              step="0.5"
-              placeholder="مثلاً 40 جنيه — سيبها فاضية لو مش عارف تحدد"
-            />
-
-            <label>رقم التواصل</label>
-
-            <input
-              name="phone"
-              type="tel"
-              inputMode="numeric"
-              required
-              defaultValue={profile.phone || ""}
-            />
-
-            {availableDrivers.length === 0 && (
-              <div className="riskWarning">
-                <AlertTriangle />
-
-                <div>
-                  <b>لا يوجد مندوب متاح لهذه الخدمة حاليًا</b>
-
-                  <span>جرّب مرة أخرى عندما يتوفر مندوب مناسب.</span>
-                </div>
-              </div>
-            )}
-
-            <label>ملاحظات</label>
-
-            <input name="notes" placeholder="أي تفاصيل إضافية - اختياري" />
+              )}
+            </div>
 
             <button
               className="primary"
-              disabled={availableDrivers.length === 0}
+              disabled={
+                availableDrivers.length === 0 ||
+                isSubmittingOrder ||
+                !isOrderFormValid
+              }
             >
-              إرسال الطلب
+              {isSubmittingOrder ? (
+                <>
+                  <Loader2 className="spinIcon" /> جاري الإرسال...
+                </>
+              ) : (
+                "إرسال الطلب"
+              )}
             </button>
 
             <button

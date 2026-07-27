@@ -923,6 +923,71 @@ body.keyboard-open .modal { margin-top: 6px; }
 }
 .modal .close:hover { background: var(--line); }
 
+/* ---------- 13b. ORDER CREATION FORM ---------- */
+/* رأس المودال: أيقونة الخدمة المختارة + العنوان + الوصف، بدل عنوان نصي بسيط */
+.orderModal { gap: 0; }
+
+.orderModalHeader {
+  display: flex; align-items: flex-start; gap: 13px;
+  padding-left: 40px; margin-bottom: 6px;
+}
+.orderModalHeaderIcon {
+  flex-shrink: 0; width: 46px; height: 46px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-md);
+  background: var(--primary-tint); color: var(--primary);
+}
+.orderModalHeaderIcon svg { width: 22px; height: 22px; }
+.orderModalHeader h2 { font-size: 18px; margin: 0 0 3px; padding-left: 0; }
+.orderModalHeader p { margin: 0; color: var(--ink-soft); font-size: 13px; line-height: 1.6; }
+
+/* جسم الفورم: تقسيم لأقسام واضحة بدل تكديس كل الحقول فوق بعض */
+.orderFormBody { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; }
+
+.formSection {
+  background: var(--bg); border: 1px solid var(--line);
+  border-radius: var(--radius-lg); padding: 16px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.formSectionTitle {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0 0 8px; font-size: 13px; font-weight: 800;
+  color: var(--primary); text-transform: none;
+}
+.formSectionTitle svg { width: 17px; height: 17px; flex-shrink: 0; }
+
+/* كل حقل داخل مكانه الخاص عشان رسالة الخطأ تظهر تحته مباشرة وبمسافات متساوية */
+.formField { margin-bottom: 10px; }
+.formField:last-child { margin-bottom: 0; }
+.formField label { margin: 0 0 6px; }
+.formField input, .formField textarea {
+  height: 48px; padding: 0 15px;
+}
+.formField textarea { height: auto; min-height: 92px; padding: 12px 15px; }
+
+.fieldError {
+  display: none;
+  margin-top: 6px; font-size: 12px; color: var(--danger);
+  font-weight: 600;
+}
+/* رسالة الخطأ تظهر فقط بعد ما المستخدم يكتب حاجة غير صالحة (مش حقل فاضي لسه ماتلمسش) */
+.formField:has(input:invalid:not(:placeholder-shown)) .fieldError,
+.formField:has(textarea:invalid:not(:placeholder-shown)) .fieldError {
+  display: block;
+}
+.formField:has(input:invalid:not(:placeholder-shown)) input,
+.formField:has(textarea:invalid:not(:placeholder-shown)) textarea {
+  border-color: var(--danger-line);
+  background: var(--danger-tint);
+}
+
+/* دوران أيقونة التحميل داخل زر الإرسال */
+.spinIcon { animation: orderSpin .8s linear infinite; }
+@keyframes orderSpin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinIcon { animation: none; } }
+
+.modal .primary:disabled { box-shadow: none; }
+
 /* ---------- 14. ADMIN ---------- */
 .adminBadge {
   display: inline-block; margin-inline-start: 8px; padding: 4px 9px;
