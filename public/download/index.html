@@ -2,7 +2,7 @@
 <html dir="rtl" lang="ar">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>مشوارك — توصيل، تسوق، ومشاوير في تطبيق واحد</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -119,10 +119,31 @@
   .foot-logo .accent{ color:var(--accent); }
   .foot-tag{ font-size:14px; color:var(--ink-faint); margin-top:6px; }
 
+  html{ -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+
   @media (max-width:720px){
     .grid{ grid-template-columns:1fr; }
+    .hero{ padding:56px 20px 70px; }
     .hero h1{ font-size:30px; }
-    .driver{ flex-direction:column; align-items:flex-start; }
+    .hero p.sub{ font-size:17px; }
+    .driver{ flex-direction:column; align-items:flex-start; padding:28px 24px; }
+    .features{ padding:56px 20px; }
+    .features h2{ font-size:26px; }
+  }
+
+  @media (max-width:420px){
+    .hero{ padding:44px 16px 56px; }
+    .hero img.logo-icon{ width:88px; border-radius:20px; }
+    .hero .logo-word{ font-size:20px; }
+    .hero h1{ font-size:25px; }
+    .hero p.sub{ font-size:15.5px; }
+    .download-btn{ font-size:17px; padding:16px 28px; width:100%; justify-content:center; }
+    .cta-row{ width:100%; }
+    .feat-card{ padding:24px 18px; }
+    .driver-text h3{ font-size:20px; }
+    .chip{ font-size:14px; padding:10px 16px; }
+    .ring1{ width:260px; height:260px; }
+    .ring2{ width:380px; height:380px; }
   }
 </style>
 </head>
@@ -132,13 +153,13 @@
     <div class="ring ring2"></div>
     <div class="ring ring1"></div>
     <div class="hero-inner">
-      <img class="logo-icon" src="logo-icon.png" alt="مشوارك">
+      <img class="logo-icon" src="/download/logo-icon.png" alt="مشوارك">
       <div class="logo-word">مشوار<span class="accent">ك</span></div>
-      <h1>وصّل، اشتري، وتحرّك... <span class="accent">في تطبيق واحد</span></h1>
+      <h1>وصّل، اشترِ، وتحرّك... <span class="accent">في تطبيق واحد</span></h1>
       <p class="sub">مشوارك بيجمعلك التوصيل والتسوق والمشاوير في مكان واحد، بسهولة وسرعة.</p>
 
       <div class="cta-row">
-        <a class="download-btn" href="app-release.apk" download>
+        <a class="download-btn" href="/download/app-release.apk" download="mashwarak.apk">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
             <path d="M12 3v12m0 0 5-5m-5 5-5-5" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M4 19.5h16" stroke="#fff" stroke-width="2.3" stroke-linecap="round"/>
@@ -164,7 +185,7 @@
           </svg>
         </div>
         <h3>توصيلة</h3>
-        <p>بنوصلك لأي مكان تختاره بأسرع وقت</p>
+        <p>وديلك أي طلب من مكانه لمكانك بأسرع وقت</p>
       </div>
       <div class="feat-card">
         <div class="feat-icon">
@@ -174,7 +195,7 @@
           </svg>
         </div>
         <h3>وصلهولي</h3>
-        <p>محتاج حاجة توصل حاجة من مكان لمكان اطلب وسيبها علينا</p>
+        <p>محتاج حاجة تتشال أو تتحط في مكانها؟ اطلب وسيبها علينا</p>
       </div>
       <div class="feat-card">
         <div class="feat-icon">
@@ -185,7 +206,7 @@
           </svg>
         </div>
         <h3>اشتري</h3>
-        <p>ابعتلنا طلباتك  وإحنا نشتريلك ونوصلهالك</p>
+        <p>ابعتلنا الليستة، وإحنا نشتريلك ونوصلهالك</p>
       </div>
     </div>
   </section>
