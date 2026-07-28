@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>مشوارك — توصيل، تسوق، ومشاوير في تطبيق واحد</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary-deep:#0E2745;
+    --primary:#173B63;
+    --accent:#FF6B35;
+    --accent-deep:#E6551F;
+    --ink-faint: rgba(255,255,255,.6);
+    --line: rgba(255,255,255,.14);
+  }
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html,body{
+    font-family:"IBM Plex Sans Arabic", "FreeSans", sans-serif;
+    background:#081729;
+    color:#fff;
+    overflow-x:hidden;
+  }
+  h1,h2,.brand{ font-family:"El Messiri","FreeSans", sans-serif; }
+
+  a.download-btn, a.ghost-btn, a.chip{ text-decoration:none; color:inherit; }
+
+  /* ---------- HERO ---------- */
+  .hero{
+    position:relative;
+    padding:70px 24px 90px;
+    text-align:center;
+    background:
+      radial-gradient(680px circle at 88% 0%, rgba(255,107,53,.12), transparent 60%),
+      radial-gradient(900px circle at 10% 100%, rgba(255,107,53,.07), transparent 55%),
+      radial-gradient(120% 90% at 50% 0%, var(--primary) 0%, var(--primary-deep) 55%, #081729 100%);
+    overflow:hidden;
+  }
+  .ring{ position:absolute; left:50%; top:170px; border-radius:50%; border:1px solid var(--line); transform:translate(-50%,-50%); }
+  .ring1{ width:320px; height:320px; }
+  .ring2{ width:480px; height:480px; border-color:rgba(255,255,255,.08); }
+
+  .hero-inner{ position:relative; z-index:2; max-width:640px; margin:0 auto; }
+  .hero img.logo-icon{ width:110px; border-radius:26px; box-shadow:0 12px 26px -8px rgba(0,0,0,.5); }
+  .hero .logo-word{ font-family:"El Messiri","FreeSans",sans-serif; font-size:24px; font-weight:700; margin-top:14px; }
+  .hero .logo-word .accent{ color:var(--accent); }
+
+  .hero h1{ font-size:40px; font-weight:700; line-height:1.35; margin-top:18px; }
+  .hero h1 .accent{ color:var(--accent); }
+  .hero p.sub{ font-size:19px; color:var(--ink-faint); margin-top:16px; line-height:1.7; }
+
+  .cta-row{ margin-top:34px; display:flex; flex-direction:column; align-items:center; gap:12px; }
+  .download-btn{
+    display:inline-flex; align-items:center; gap:12px;
+    background:var(--accent); color:#fff;
+    font-size:20px; font-weight:700;
+    padding:18px 40px; border-radius:16px;
+    box-shadow:0 14px 30px -8px rgba(255,107,53,.55);
+  }
+  .download-btn svg{ flex-shrink:0; }
+  .cta-meta{ font-size:14px; color:var(--ink-faint); }
+
+  /* ---------- FEATURES ---------- */
+  .features{ padding:70px 24px; max-width:960px; margin:0 auto; }
+  .features h2{ text-align:center; font-size:30px; font-weight:700; }
+  .features p.lead{ text-align:center; color:var(--ink-faint); margin-top:10px; font-size:17px; }
+
+  .grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:20px; margin-top:44px; }
+  .feat-card{
+    background:rgba(255,255,255,.05);
+    border:1px solid var(--line);
+    border-radius:22px;
+    padding:30px 22px;
+    text-align:center;
+  }
+  .feat-icon{
+    width:60px; height:60px; border-radius:18px; margin:0 auto 18px;
+    background:rgba(255,107,53,.16);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .feat-card h3{ font-size:20px; font-weight:700; margin-bottom:8px; }
+  .feat-card p{ font-size:15px; color:var(--ink-faint); line-height:1.7; }
+
+  /* ---------- DRIVER STRIP ---------- */
+  .driver{
+    margin:20px 24px 0;
+    max-width:960px; margin-left:auto; margin-right:auto;
+    background:linear-gradient(120deg, rgba(255,107,53,.14), rgba(255,255,255,.04));
+    border:1px solid var(--line);
+    border-radius:26px;
+    padding:38px 34px;
+    display:flex; align-items:center; justify-content:space-between; gap:24px;
+    flex-wrap:wrap;
+  }
+  .driver-text h3{ font-size:23px; font-weight:700; }
+  .driver-text p{ font-size:15px; color:var(--ink-faint); margin-top:6px; }
+  .driver-contacts{ display:flex; gap:14px; flex-wrap:wrap; }
+  .chip{
+    display:flex; align-items:center; gap:10px;
+    background:rgba(0,0,0,.22);
+    border:1px solid var(--line);
+    border-radius:100px;
+    padding:11px 20px;
+    font-weight:700; font-size:16px;
+    direction:ltr;
+    cursor:pointer;
+    transition:background .15s ease, transform .15s ease, border-color .15s ease;
+  }
+  .chip:hover{ background:rgba(255,107,53,.22); border-color:rgba(255,107,53,.5); transform:translateY(-1px); }
+  .chip:active{ transform:translateY(0); }
+  .chip .lbl{ font-family:"IBM Plex Sans Arabic","FreeSans",sans-serif; direction:rtl; font-weight:600; font-size:14px; color:var(--ink-faint); }
+
+  /* ---------- FOOTER ---------- */
+  .footer{ text-align:center; padding:70px 24px 50px; }
+  .route{ width:220px; height:26px; margin:0 auto 18px; }
+  .route svg{ width:100%; height:100%; display:block; }
+  .foot-logo{ font-size:22px; font-weight:700; }
+  .foot-logo .accent{ color:var(--accent); }
+  .foot-tag{ font-size:14px; color:var(--ink-faint); margin-top:6px; }
+
+  @media (max-width:720px){
+    .grid{ grid-template-columns:1fr; }
+    .hero h1{ font-size:30px; }
+    .driver{ flex-direction:column; align-items:flex-start; }
+  }
+</style>
+</head>
+<body>
+
+  <section class="hero">
+    <div class="ring ring2"></div>
+    <div class="ring ring1"></div>
+    <div class="hero-inner">
+      <img class="logo-icon" src="logo-icon.png" alt="مشوارك">
+      <div class="logo-word">مشوار<span class="accent">ك</span></div>
+      <h1>وصّل، اشتري، وتحرّك... <span class="accent">في تطبيق واحد</span></h1>
+      <p class="sub">مشوارك بيجمعلك التوصيل والتسوق والمشاوير في مكان واحد، بسهولة وسرعة.</p>
+
+      <div class="cta-row">
+        <a class="download-btn" href="app-release.apk" download>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path d="M12 3v12m0 0 5-5m-5 5-5-5" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M4 19.5h16" stroke="#fff" stroke-width="2.3" stroke-linecap="round"/>
+          </svg>
+          حمّل التطبيق الآن
+        </a>
+        <div class="cta-meta">Android APK</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="features">
+    <h2>خدماتنا</h2>
+    <p class="lead">كل اللي محتاجه في مكان واحد</p>
+    <div class="grid">
+      <div class="feat-card">
+        <div class="feat-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+            <path d="M3 7h11v9H3z" stroke="#FF6B35" stroke-width="2"/>
+            <path d="M14 10h4l3 3v3h-7z" stroke="#FF6B35" stroke-width="2"/>
+            <circle cx="7" cy="18" r="1.8" stroke="#FF6B35" stroke-width="2"/>
+            <circle cx="17.5" cy="18" r="1.8" stroke="#FF6B35" stroke-width="2"/>
+          </svg>
+        </div>
+        <h3>توصيلة</h3>
+        <p>بنوصلك لأي مكان تختاره بأسرع وقت</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+            <path d="M6 8h12l-1 12H7L6 8z" stroke="#FF6B35" stroke-width="2" stroke-linejoin="round"/>
+            <path d="M9 8a3 3 0 0 1 6 0" stroke="#FF6B35" stroke-width="2"/>
+          </svg>
+        </div>
+        <h3>وصلهولي</h3>
+        <p>محتاج حاجة توصل حاجة من مكان لمكان اطلب وسيبها علينا</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+            <circle cx="9" cy="20" r="1.6" stroke="#FF6B35" stroke-width="2"/>
+            <circle cx="17" cy="20" r="1.6" stroke="#FF6B35" stroke-width="2"/>
+            <path d="M3 4h2l2.4 12.2a1.8 1.8 0 0 0 1.8 1.4h8.2a1.8 1.8 0 0 0 1.8-1.4L21 8H6" stroke="#FF6B35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h3>اشتري</h3>
+        <p>ابعتلنا طلباتك  وإحنا نشتريلك ونوصلهالك</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="driver">
+    <div class="driver-text">
+      <h3>سواق؟ اتفضل انضم لينا</h3>
+      <p>بأي وسيلة — موتوسيكل / تروسيكل / عربية</p>
+    </div>
+    <div class="driver-contacts">
+      <a class="chip" href="tel:+201146611925"><span class="lbl">اتصال</span> 01146611925</a>
+      <a class="chip" href="https://wa.me/201022827847" target="_blank" rel="noopener"><span class="lbl">واتساب</span> 01022827847</a>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="route">
+      <svg viewBox="0 0 220 26" xmlns="http://www.w3.org/2000/svg">
+        <path d="M14,13 C70,2 150,24 206,13" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="2" stroke-dasharray="4 7" stroke-linecap="round"/>
+        <circle cx="14" cy="13" r="6" fill="#FF6B35"/>
+        <circle cx="206" cy="13" r="6" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2"/>
+      </svg>
+    </div>
+    <div class="foot-logo">مشوار<span class="accent">ك</span></div>
+    <div class="foot-tag">معاك من نقطة لنقطة</div>
+  </footer>
+
+</body>
+</html>
