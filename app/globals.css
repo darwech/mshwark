@@ -395,6 +395,18 @@ header {
 }
 .roles button.chosen { border-color: var(--primary); color: var(--primary); background: var(--primary-tint); }
 
+/* اختيار نوع المركبة (تسجيل مندوب + إنشاء طلب): نفس نمط .roles، بس
+   3 أعمدة بدل عمودين (3 خيارات: موتوسيكل/سيارة/تروسيكل)، والإيموجي
+   فوق النص بدل جنبه عشان يفضل الزرار مرتب حتى على الشاشات الضيقة. */
+.vehicleTypeRoles { grid-template-columns: repeat(3, 1fr); }
+.vehicleTypeRoles button {
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 6px;
+  font-size: 13px;
+}
+.vehicleTypeRoles button span[aria-hidden="true"] { font-size: 22px; line-height: 1; }
+
 .verificationBox {
   display: flex; gap: 12px; align-items: flex-start;
   padding: 14px 15px; margin-top: 10px;

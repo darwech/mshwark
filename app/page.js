@@ -1621,16 +1621,24 @@ function Customer({ profile, orders, drivers, refresh, flash, openAccount }) {
   const recentOrders = orders.slice(0, 3); // معاينة سريعة للرئيسية - نفس بيانات orders، بدون أي query جديد
 
   const availableDrivers = drivers.filter((driver) => {
-    if (serviceType === "purchase") {
-      return driver.can_purchase !== false;
+    if (serviceType === "purchase" && driver.can_purchase === false) {
+      return false;
     }
 
-    if (serviceType === "delivery") {
-      return driver.can_delivery !== false;
+    if (serviceType === "delivery" && driver.can_delivery === false) {
+      return false;
     }
 
-    if (serviceType === "ride") {
-      return driver.can_ride === true;
+    if (serviceType === "ride" && driver.can_ride !== true) {
+      return false;
+    }
+
+    // لو العميل اختار نوع مركبة، نتأكد إن فيه على الأقل مندوب متاح بنفس
+    // النوع ده، مش بس متاح لنفس نوع الخدمة. بدون الشرط ده، ممكن العميل
+    // يبعت طلب "تروسيكل" مثلاً من غير ما ياخد أي تحذير، رغم إنه مفيش أي
+    // مندوب تروسيكل متاح أصلاً، وميوصلوش أي إشعار من غير ما يعرف السبب.
+    if (orderVehicleType && driver.vehicle_type !== orderVehicleType) {
+      return false;
     }
 
     return true;
